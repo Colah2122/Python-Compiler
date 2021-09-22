@@ -1,13 +1,9 @@
 
 from abc import ABC, abstractmethod
 
-#================================================================================
-#>>>>>>>> task 1:  Define data structures to represent J0 programs.
-#================================================================================
-
 debug = 1
 
-class JExpr(ABC): 
+class JExpr(ABC):
     def ppt(self):
         return self.__str__();
     @abstractmethod
@@ -42,3 +38,19 @@ class JMult(JExpr):
         return "(* " + str(self.eLeft) + " " + str(self.eRight) + ")"
     def interp(self):
         return self.eLeft.interp() * self.eRight.interp()
+
+j0 = []
+j0.append(JNum(9))
+j0.append(JPlus(JNum(2),JNum(3)))
+j0.append(JMult(JNum(2),JNum(7)))
+j0.append(JPlus(JNum(1),JMult(JNum(2),JNum(5))))
+j0.append(JPlus(JNum(14),JPlus(JNum(1),JMult(JNum(2),JNum(5)))))
+j0.append(JPlus(JNum(5),JPlus(JNum(1),JMult(JNum(2),JMult(JNum(7),JNum(5))))))
+
+
+print()
+print("="*80)
+print(">"*8, "task 2: ", "Write a pretty-printer for J0 programs.")
+print("="*80)
+for e in j0:
+    print(e.ppt())
