@@ -39,6 +39,13 @@ class JMult(JExpr):
     def interp(self):
         return self.eLeft.interp() * self.eRight.interp()
 
+def JCheck(e, expAns):
+    actAns = e.interp()
+    isCorrect = actAns == expAns
+    result = "CORRECT!!" if isCorrect else "FAILURE!!"
+    print(e.ppt(), " = ", actAns, " >>> ", result)
+    return isCorrect
+
 j0 = []
 j0.append([JNum(9), 9])
 j0.append([JPlus(JNum(2),JNum(3)), 5])
@@ -56,7 +63,7 @@ j0.append([JPlus(JMult(JNum(2),JNum(3)),JPlus(JPlus(JPlus(JPlus(JNum(-3),JMult(J
 
 print()
 print("="*80)
-print(">"*8, "task 3: ", "Write a test-suite of a dozen J0 programs.")
+print(">"*8, "task 4: ", "Implement a big-step interpreter for J0.")
 print("="*80)
 for e in j0:
-    print(e[0].ppt(), " >>> ", e[1], "???")
+    JCheck(e[0], e[1])
