@@ -40,17 +40,23 @@ class JMult(JExpr):
         return self.eLeft.interp() * self.eRight.interp()
 
 j0 = []
-j0.append(JNum(9))
-j0.append(JPlus(JNum(2),JNum(3)))
-j0.append(JMult(JNum(2),JNum(7)))
-j0.append(JPlus(JNum(1),JMult(JNum(2),JNum(5))))
-j0.append(JPlus(JNum(14),JPlus(JNum(1),JMult(JNum(2),JNum(5)))))
-j0.append(JPlus(JNum(5),JPlus(JNum(1),JMult(JNum(2),JMult(JNum(7),JNum(5))))))
+j0.append([JNum(9), 9])
+j0.append([JPlus(JNum(2),JNum(3)), 5])
+j0.append([JMult(JNum(2),JNum(7)), 14])
+j0.append([JPlus(JNum(1),JMult(JNum(2),JNum(5))), 11])
+j0.append([JPlus(JNum(-3),JMult(JNum(-1),JNum(9))), -12])
+j0.append([JPlus(JNum(-114),JPlus(JNum(1),JMult(JNum(-2),JNum(-5)))), -103])
+j0.append([JMult(JNum(14),JPlus(JNum(1),JPlus(JNum(2),JNum(5)))), 112])
+j0.append([JPlus(JNum(3),JPlus(JNum(2),JPlus( JMult(JNum(3),JNum(4)),JMult(JNum(-1),JNum(4))))), 13])
+j0.append([JPlus(JNum(5),JPlus(JNum(1),JMult(JNum(2),JMult(JNum(7),JNum(5))))), 76])
+j0.append([JPlus(JMult(JNum(2),JNum(3)),JPlus(JPlus(JPlus(JNum(2),JNum(-4)),JNum(2)),JMult(JNum(2),JNum(3)))), 12])
+j0.append([JMult(JPlus(JNum(1),JMult(JNum(2),JNum(5))),JMult(JNum(14),JPlus(JNum(1),JPlus(JNum(2),JNum(5))))), 1232])
+j0.append([JPlus(JMult(JNum(2),JNum(3)),JPlus(JPlus(JPlus(JPlus(JNum(-3),JMult(JNum(-1),JNum(9))),JNum(-4)),JNum(2)),JMult(JNum(2),JNum(3)))), -2])
 
 
 print()
 print("="*80)
-print(">"*8, "task 2: ", "Write a pretty-printer for J0 programs.")
+print(">"*8, "task 3: ", "Write a test-suite of a dozen J0 programs.")
 print("="*80)
 for e in j0:
-    print(e.ppt())
+    print(e[0].ppt(), " >>> ", e[1], "???")
