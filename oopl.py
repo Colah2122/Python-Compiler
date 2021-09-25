@@ -4,6 +4,7 @@ import re
 import sys
 
 debug = 0
+primAll = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
 
 class JExpr(ABC):
     def ppt(self):
@@ -40,6 +41,27 @@ class JMult(JExpr):
         return "(* " + str(self.eLeft) + " " + str(self.eRight) + ")"
     def interp(self):
         return self.eLeft.interp() * self.eRight.interp()
+
+class JCond(JExpr):
+    def __init__(self, eCond, eTrue, eFalse):
+        self.eCond = eCond
+        self.eTrue = eTrue
+        self.eFalse = eFalse
+    def __str__(self):
+        return "(if " + str(self.eCond) + " " + str(self.eTrue) + " " + str(self.eFalse) + ")"
+    def interp(self):
+        pass
+
+class JDelta(JExpr):
+    def __init__(self, prim, eLeft, eRight):
+        self.prim = prim
+        self.eLeft = eLeft
+        self.eRight = eRight
+        if self.prim not in primAll: sys.exit(self.prim + " not supported?")
+    def __str__(self):
+        return "(" + str(self.prim) + " " + str(self.eLeft) + " " + str(self.eRight) + ")"
+    def interp(self):
+        pass
 
 def JCheck(e, expAns):
     actAns = e.interp()
@@ -94,34 +116,16 @@ def desugar(se):
         else:
             sys.exit("can't generate JExpr?")
 
-e = []
-e.append(["9", 9])
-e.append(["(+ 2 3)", 5])
-e.append(["(* 2 -7)", -14])
-e.append(["(+ 1 (* 2 -5))", -9])
-e.append(["(+ 1 (* 1 (* 1 1)))", 2])
-e.append(["(+ 1 (+ 5 (* 2 (* 5 -5))))", -44])
-e.append(["(+ 3 (+ 2 (+ (* 3 4) (* -1 4))))", 13])
-e.append(["(+ 5 (+ 1 (* 2 (* 7 5))))", 76])
-e.append(["(+ 5 (+ (+ 2 (+ 7 5)) 81))", 100])
-e.append(["(+ (* 2 3) (+ (+ (+ 2 -4) 2) (* 2 3)))", 12])
-e.append(["(* (+ 1 (* 2 5)) (* 14 (+ 1 (+ 2 5))))", 1232])
-e.append(["(+ (* 2 3) (+ (+ (+ (+ -3 (* -1 9)) -4) 2) (* 2 3)))", -2])
-
-# test J0 surface
-e.append(["(- 1 7)", -6])
-e.append(["(+ 1 7 5 6 2 6)", 27])
-e.append(["(* 1 3 4 2 2 2 )", 96])
-e.append(["(- 7 (- 4 2))", 5])
-e.append(["(- 7 (+ 4 2))", 1])
 
 print()
 print("="*80)
-print(">"*8, "task 7: Implement a desugar function that converts Sexprs into J0")
+print(">"*8, "task 8: Define data structures to represent J1 programs, with pretty printers")
 print("="*80)
 
-for l in e:
-    print("-"*50)
-    se = reader(l[0])
-    j0 = desugar(se)
-    JCheck(j0, l[1])
+a = JCond(">=",JNum(4),JNum(5))
+b = JDelta("+",JNum(5),JNum(2))
+c = JCond("<",JDelta("-",JNum(9),JNum(7)),JNum(2))
+
+print(a.ppt())
+print(b.ppt())
+print(c.ppt())
