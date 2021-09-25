@@ -1,6 +1,7 @@
 
 from abc import ABC, abstractmethod
 import re
+import sys
 
 debug = 0
 
@@ -69,6 +70,30 @@ def reader(e):
     se = parseList(tokens)
     return se
 
+def desugar(se):
+    if debug and not isinstance(se, int): print("desugar=", se)
+    if isinstance(se, int):
+        return JNum(se)
+    if isinstance(se, list):
+        myLen = len(se)
+        mySym = str(se[0])
+        if isinstance(se[0], int):
+            return JNum(se[0])
+        elif myLen == 3 and mySym == "+":
+            return JPlus(desugar(se[1]), desugar(se[2]))
+        elif myLen == 3 and mySym == "*":
+            return JMult(desugar(se[1]), desugar(se[2]))
+        elif myLen == 3 and mySym == "-":
+            return desugar(["+", se[1], ["*", -1, se[2]]])
+        elif myLen == 2 and mySym == "-":
+            return desugar(["*", -1, se[1]])
+        elif myLen > 3 and mySym in ("+", "*", "-"):
+            copy = se
+            se =  copy.pop(1)
+            return desugar([mySym, se, copy])
+        else:
+            sys.exit("can't generate JExpr?")
+
 e = []
 e.append(["9", 9])
 e.append(["(+ 2 3)", 5])
@@ -83,14 +108,20 @@ e.append(["(+ (* 2 3) (+ (+ (+ 2 -4) 2) (* 2 3)))", 12])
 e.append(["(* (+ 1 (* 2 5)) (* 14 (+ 1 (+ 2 5))))", 1232])
 e.append(["(+ (* 2 3) (+ (+ (+ (+ -3 (* -1 9)) -4) 2) (* 2 3)))", -2])
 
+# test J0 surface
+e.append(["(- 1 7)", -6])
+e.append(["(+ 1 7 5 6 2 6)", 27])
+e.append(["(* 1 3 4 2 2 2 )", 96])
+e.append(["(- 7 (- 4 2))", 5])
+e.append(["(- 7 (+ 4 2))", 1])
 
 print()
 print("="*80)
-print(">"*8, "task 6: Convert your J0 test-suite into Sexprs")
+print(">"*8, "task 7: Implement a desugar function that converts Sexprs into J0")
 print("="*80)
 
 for l in e:
     print("-"*50)
-    print("str=",l[0])
     se = reader(l[0])
-    print("se=", se)
+    j0 = desugar(se)
+    JCheck(j0, l[1])
