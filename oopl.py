@@ -7,12 +7,17 @@ class JExpr(ABC):
     @abstractmethod
     def __str__(self):
         pass
+    @abstractmethod
+    def interp(self):
+        pass
 
 class JNum(JExpr):
     def __init__(self, eNum):
         self.eNum = int(eNum)
     def __str__(self):
         return str(self.eNum)
+    def interp(self):
+        return self.eNum
 
 class JPlus(JExpr):
     def __init__(self, eLeft, eRight):
@@ -20,6 +25,8 @@ class JPlus(JExpr):
         self.eRight = eRight
     def __str__(self):
         return "(+ " + str(self.eLeft) + " " + str(self.eRight) + ")"
+    def interp(self):
+        return self.eLeft.interp() + self.eRight.interp()
 
 class JMult(JExpr):
     def __init__(self, eLeft, eRight):
@@ -27,6 +34,15 @@ class JMult(JExpr):
         self.eRight = eRight
     def __str__(self):
         return "(* " + str(self.eLeft) + " " + str(self.eRight) + ")"
+    def interp(self):
+        return self.eLeft.interp() * self.eRight.interp()
+
+def JCheck(e, expAns):
+    actAns = e.interp()
+    isCorrect = actAns == expAns
+    result = "CORRECT!!" if isCorrect else "FAILURE!!"
+    print(e.ppt(), " = ", actAns, " >>> ", result)
+    return isCorrect
 
 e = []
 e.append([JNum(9), 9])
@@ -45,9 +61,9 @@ e.append([JPlus(JMult(JNum(2),JNum(3)),JPlus(JPlus(JPlus(JPlus(JNum(-3),JMult(JN
 
 print()
 print("="*80)
-print(">"*8, "task 3: Write a test-suite of a dozen J0 programs")
+print(">"*8, "task 4: Implement a big-step interpreter for J0")
 print("="*80)
 
 for l in e:
     print("-"*50)
-    print(l[0].ppt(), ">>>", l[1], "?????")
+    JCheck(l[0], l[1])
