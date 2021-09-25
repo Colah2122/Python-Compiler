@@ -176,6 +176,26 @@ def findRedex(term):
     else:
         sys.exit("can't findRedex?")
 
+def interpSS(se):
+    if debug: print("se=", se)
+    flat = flatten(se)
+    if debug: print("flat=", flat)
+    cnt = 1
+    while True:
+        print(">"*10, "STEP #", cnt, ">"*20)
+        cnt += 1
+        print("flat=",flat)
+        c, r = findRedex(flat)
+        print("context=",c)
+        print("redex=",r)
+        if r == []:
+            break
+        e = desugar(r)
+        ans = e.interp()
+        print("ans=", ans)
+        flat = plugHole(ans, c)
+    return c
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
@@ -195,13 +215,12 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 14: Implement find-redex, a function that breaks a term into a context and a redex")
+print(">"*8, "task 15: Implement a small-step interpreter for J1 using contexts")
 print("="*80)
 
 for l in se1:
     print("-"*50)
-    term = flatten(l[0])
-    print("term=",term)
-    c, r = findRedex(term)
-    print("context=",c)
-    print("redex=",r)
+    print("se=",l[0])
+    aSmall = interpSS(l[0])
+    jBig = desugar(l[0])
+    JCheck(jBig,aSmall)
