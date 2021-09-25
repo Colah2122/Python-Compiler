@@ -50,7 +50,8 @@ class JCond(JExpr):
     def __str__(self):
         return "(if " + str(self.eCond) + " " + str(self.eTrue) + " " + str(self.eFalse) + ")"
     def interp(self):
-        pass
+        ek = self.eTrue if bool(self.eCond.interp()) == True else self.eFalse
+        return ek.interp()
 
 class JDelta(JExpr):
     def __init__(self, prim, eLeft, eRight):
@@ -61,7 +62,26 @@ class JDelta(JExpr):
     def __str__(self):
         return "(" + str(self.prim) + " " + str(self.eLeft) + " " + str(self.eRight) + ")"
     def interp(self):
-        pass
+        if self.prim == "+":
+            return self.eLeft.interp() + self.eRight.interp()
+        elif self.prim == "*":
+            return self.eLeft.interp() * self.eRight.interp()
+        elif self.prim == "/":
+            return int(self.eLeft.interp() / self.eRight.interp())
+        elif self.prim == "-":
+            return self.eLeft.interp() - self.eRight.interp()
+        elif self.prim == "<=":
+            return self.eLeft.interp() <= self.eRight.interp()
+        elif self.prim == "<":
+            return self.eLeft.interp() < self.eRight.interp()
+        elif self.prim == "=":
+            return self.eLeft.interp() == self.eRight.interp()
+        elif self.prim == ">":
+            return self.eLeft.interp() > self.eRight.interp()
+        elif self.prim == ">=":
+            return self.eLeft.interp() >= self.eRight.interp()
+        else:
+            sys.exit(self.prim + " not implemented?")
 
 def JCheck(e, expAns):
     actAns = e.interp()
@@ -139,11 +159,11 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 10: Extend desugar to emit J1 programs.")
+print(">"*8, "task 11: Extend your interpreter for J1")
 print("="*80)
 
 for l in se1:
     print("-"*50)
     print("se=",l[0])
     j1 = desugar(l[0])
-    print(j1.ppt(), ">>>", l[1], "????")
+    JCheck(j1, l[1])
