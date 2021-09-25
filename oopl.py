@@ -157,6 +157,25 @@ def plugHole(ans, context):
     context[i] = ans
     return ans if i == 0 else context
 
+def last(aList, item):
+    return len(aList) - list(reversed(aList)).index(item) -  1 if item in aList else -1
+
+def findRedex(term):
+    if debug: print("input=", term)
+    if isinstance(term, int):
+        return term, []
+    if isinstance(term, list):
+        start = last(term,"[") + 1
+        if start == 0:
+            return ["Hole"], term
+        stop = term.index("]",start)
+        redex = term[start:stop]
+        term[start-1] = "Hole"
+        del term[start:stop+1]
+        return term, redex
+    else:
+        sys.exit("can't findRedex?")
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
@@ -176,9 +195,13 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 13: Implement plug, a function that fills the hole in a context with a program")
+print(">"*8, "task 14: Implement find-redex, a function that breaks a term into a context and a redex")
 print("="*80)
 
-c = flatten(["if", ["<", "Hole", 3], 15, -3])
-print("context=",c)
-print(plugHole(5,c))
+for l in se1:
+    print("-"*50)
+    term = flatten(l[0])
+    print("term=",term)
+    c, r = findRedex(term)
+    print("context=",c)
+    print("redex=",r)
