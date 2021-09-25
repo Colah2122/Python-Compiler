@@ -116,16 +116,27 @@ def desugar(se):
         else:
             sys.exit("can't generate JExpr?")
 
+se1 = []
+se1.append([19, 19])
+se1.append([[">=", 5, 3], True])
+se1.append([[">=", ["+", 8, 9], 3], True])
+se1.append([[">=", 3, 5], False])
+se1.append([["if", ["<", 1, 3], 15, -3], 15])
+se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
+se1.append([["+", 5, ["*", 2, -3]], -1])
+se1.append([["if", ["<", 1, 3], ["if", [">", 4, 2], -3, -5], 15], -3])
+se1.append([["if", [">", 1, 3], ["if", [">", 4, 2], -3, -5], ["if", ["<", ["+", 2, 2], ["*", 3, 1]], -31, 4]], 4])
+se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, 5], -3], 9])
+se1.append([["+", 1, ["if", ["+", 2, 2], 3, 4]], 4])
+se1.append([["+", 1, ["if", ["+", 2, -2], 3, 4]], 5])
+se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 3])
+se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 8: Define data structures to represent J1 programs, with pretty printers")
+print(">"*8, "task 9: Write a test-suite of a dozen J1 programs")
 print("="*80)
 
-a = JCond(">=",JNum(4),JNum(5))
-b = JDelta("+",JNum(5),JNum(2))
-c = JCond("<",JDelta("-",JNum(9),JNum(7)),JNum(2))
-
-print(a.ppt())
-print(b.ppt())
-print(c.ppt())
+for l in se1:
+    print("-"*50)
+    print(l[0], ">>>", l[1], "????")
