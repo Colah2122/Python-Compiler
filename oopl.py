@@ -140,6 +140,17 @@ def desugar(se):
         else:
             sys.exit("can't generate JExpr?")
 
+def flatten(aList):
+    result = []
+    if isinstance(aList, int):
+        return [aList]
+    for element in aList:
+        if hasattr(element, "__iter__") and not isinstance(element, str):
+            result.extend(["["] + flatten(element) + ["]"])
+        else:
+            result.append(element)
+    return result
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
@@ -159,11 +170,8 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 11: Extend your interpreter for J1")
+print(">"*8, "task 12: Define data structures to represent contexts")
 print("="*80)
 
-for l in se1:
-    print("-"*50)
-    print("se=",l[0])
-    j1 = desugar(l[0])
-    JCheck(j1, l[1])
+c = flatten(["if", ["<", "Hole", 3], 15, -3])
+print("context=",c)
