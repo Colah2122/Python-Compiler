@@ -151,6 +151,12 @@ def flatten(aList):
             result.append(element)
     return result
 
+def plugHole(ans, context):
+    if debug: print("context=",context)
+    i = context.index("Hole")
+    context[i] = ans
+    return ans if i == 0 else context
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
@@ -170,8 +176,9 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 12: Define data structures to represent contexts")
+print(">"*8, "task 13: Implement plug, a function that fills the hole in a context with a program")
 print("="*80)
 
 c = flatten(["if", ["<", "Hole", 3], 15, -3])
 print("context=",c)
+print(plugHole(5,c))
