@@ -101,6 +101,10 @@ def desugar(se):
         mySym = str(se[0])
         if isinstance(se[0], int):
             return JNum(se[0])
+        elif myLen == 3 and mySym in primAll:
+            return JDelta(mySym, desugar(se[1]), desugar(se[2]))
+        elif myLen == 4 and mySym in "if":
+            return JCond(desugar(se[1]), desugar(se[2]), desugar(se[3]))
         elif myLen == 3 and mySym == "+":
             return JPlus(desugar(se[1]), desugar(se[2]))
         elif myLen == 3 and mySym == "*":
@@ -132,11 +136,14 @@ se1.append([["+", 1, ["if", ["+", 2, -2], 3, 4]], 5])
 se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 3])
 se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
+
 print()
 print("="*80)
-print(">"*8, "task 9: Write a test-suite of a dozen J1 programs")
+print(">"*8, "task 10: Extend desugar to emit J1 programs.")
 print("="*80)
 
 for l in se1:
     print("-"*50)
-    print(l[0], ">>>", l[1], "????")
+    print("se=",l[0])
+    j1 = desugar(l[0])
+    print(j1.ppt(), ">>>", l[1], "????")
