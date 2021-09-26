@@ -386,16 +386,53 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 se1.append([["+", 1, ["*", 2, 10], -3, 5, ["if", ["=", 3, 3], 3, ["+", 4, 4]]], 26])
 se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
 se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
+se1.append([[["define", ["Simple", "n"], ["+", ["*", "n", 3], 4]],
+             ["Simple", 3]], 13]),
+se1.append([[["define", ["Simple", "a", "b", "c", "d", "e", "f", "g", "h"], ["+", "a", "b", "c", "d", "e", "f", "g", "h"]],
+             ["Simple", 1, 2, 3, 4, 5, 6, 7, 8]], 36]),
+se1.append([[["define", ["P", "n"], ["if", [">", "n", 0], ["+", 1, ["Q", ["-", "n", 1]]], 1]],
+             ["define", ["Q", "y"], ["if", [">", "y", 0], ["*", ["+", ["Q", ["-", "y", 1]], "y"], ["P", "y"]], 0]],
+             ["+", ["Q", 3], ["P", 3]]], 70])
+se1.append([[["define", ["Plus1", "n"], ["+", "n", 1]],
+             ["define", ["Plus2", "n"], ["+", "n", 2]],
+             ["define", ["Plus3", "n"], ["+", "n", 3]],
+             ["define", ["Plus4", "n"], ["+", "n", 4]],
+             ["define", ["Plus5", "n"], ["+", "n", 5]],
+             ["+", ["Plus1", 5], ["Plus2", 4], ["Plus3", 3], ["Plus4", 2], ["Plus5", 1]]], 30])
+se1.append([[["define", ["Plus1", "n"], ["+", "n", 1]],
+             ["define", ["Plus2", "n"], ["+", "n", 2]],
+             ["define", ["Plus3", "n"], ["+", "n", 3]],
+             ["define", ["Plus4", "n"], ["+", "n", 4]],
+             ["define", ["Plus5", "n"], ["+", "n", 5]],
+             ["+", ["Plus1", ["Plus2", ["Plus3", ["Plus4", ["Plus5", 1]]]]], 12]], 28])
+se1.append([[["define", ["ImN", "n"], ["n"]],
+             ["+", ["ImN", 4], ["ImN", 3], ["ImN", -3], ["ImN", 6]]], 10])
+se1.append([[["define", ["Factorial", "n"], ["if", ["=", "n", 1], 1, ["*", "n", ["Factorial", ["-", "n", 1]]]]],
+             ["+", 1, ["Factorial", 6]]], 721])
+se1.append([[["define", ["F", "x"], ["+", "x", 2]],
+             ["define", ["G", "x", "y"], ["+", ["F", "x"],["F", "y"]]],
+             ["G", ["+", 1, 2], 4]], 11])
+se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
+             ["define", ["Quad", "y"], ["Double", ["Double", "y"]]],
+             ["Quad", ["+", 1, ["Double", 3]]]], 28])
+se1.append([[["define", ["Sum1toN", "n"], ["if", ["=", "n", 1], 1, ["+", "n", ["Sum1toN", ["+", "n", -1]]]]],
+             ["+", 1, ["Sum1toN", 5]]], 16])
+se1.append([[["define", ["FibN", "n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n", 1], 1, ["+", ["FibN", ["-", "n", 1]], ["FibN", ["-", "n", 2]]]]]],
+             ["FibN", 5]], 5])
+se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", ["-", "n", 1]]]],
+             ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
+             ["IsOdd", [7]]], True])
 
 
 print()
 print("="*80)
-print(">"*8, "task 21: Define data structures to represent J2 programs and function definitions")
+print(">"*8, "task 22: Write a test-suite of a dozen J2 programs")
 print("="*80)
 
-updateDict("F", ["x"], ["+", "x", 2])
-updateDict("G", ["x", "y"], ["+", ["F", "x"],["F", "y"]])
-
-a = JFunc("G", [["+", 1, 2], 4])
-
-print("a=", a.ppt())
+for l in se1:
+    clearDict()
+    print()
+    print("="*80)
+    print("="*80)
+    ans = l.pop()
+    print(l, ">>>", ans, "?????")
