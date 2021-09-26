@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import re
 import sys
 
-debug = 0
+debug = 1
 primAll = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
 
 class JExpr(ABC):
@@ -196,26 +196,74 @@ def interpSS(se):
         flat = plugHole(ans, c)
     return c
 
+def myStr(l):
+    if isinstance(l, list):
+        if len(l) == 0: return "[]"
+        s1 = " ".join(str(x) for x in l)
+        if l[0] != "[": s1 = "[" +  s1
+        if l[-1] != "]": s1 = s1 + "]"
+        s2 = s1.replace("[ ", "[").replace(" ]", "]")
+        return s2
+    return str(l)
+
+class frame(ABC):
+    def ppt(self):
+        return self.__str__();
+    @abstractmethod
+    def __str__(self):
+        pass
+
+class kret(frame):
+    def __str__(self):
+        return "kret"
+
+class kif(frame):
+    def __init__(self, eTrue, eFalse, k):
+        if not isinstance(k, frame): sys.exit("k must be a frame?")
+        self.eTrue = eTrue
+        self.eFalse = eFalse
+        self.frame = k
+    def __str__(self):
+        return "kif(" + myStr(self.eTrue) + ", " + myStr(self.eFalse) + ", " + str(self.frame) + ")"
+
+class kapp(frame):
+    def __init__(self, lVal, lExpr, k):
+        if not isinstance(lVal, list): sys.exit("lVal must be a list?")
+        if not isinstance(lExpr, list): sys.exit("lExpr must be a list?")
+        if not isinstance(k, frame): sys.exit("k must be a frame?")
+        self.lVal = lVal
+        self.lExpr = lExpr
+        self.frame = k
+    def __str__(self):
+        return "kapp(" + myStr(self.lVal) + ", " + myStr(self.lExpr) + ", " + str(self.frame) + ")"
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
-se1.append([[">=", ["+", 8, 9], 3], True])
+se1.append([[">=", ["+", 8, ["*", 1, 3, 1, 1, 2]], 3], True])
 se1.append([[">=", 3, 5], False])
-se1.append([["if", ["<", 1, 3], 15, -3], 15])
-se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
 se1.append([["+", 5, ["*", 2, -3]], -1])
 se1.append([["if", ["<", 1, 3], ["if", [">", 4, 2], -3, -5], 15], -3])
 se1.append([["if", [">", 1, 3], ["if", [">", 4, 2], -3, -5], ["if", ["<", ["+", 2, 2], ["*", 3, 1]], -31, 4]], 4])
 se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, 5], -3], 9])
 se1.append([["+", 1, ["if", ["+", 2, 2], 3, 4]], 4])
 se1.append([["+", 1, ["if", ["+", 2, -2], 3, 4]], 5])
-se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 3])
+se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 12])
 se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
+se1.append([["+", 1, ["*", 2, 10], -3, 5, ["if", ["=", 3, 3], 3, ["+", 4, 4]]], 26])
+se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
+se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
 
 
 print()
 print("="*80)
-print(">"*8, "task 17: Write a function that emit HL-J1 programs as LL-J1 programs")
+print(">"*8, "task 18: Define data structures to represent continuations")
 print("="*80)
 
-print("high-level python code seems to be quite low-level, yes we shall see..")
+a = kret()
+b = kif(5, 7, a)
+c = kapp([], ["+", 3, 4], b)
+
+print("a=", a)
+print("b=", b)
+print("c=", c)
