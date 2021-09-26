@@ -215,7 +215,7 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 16: Define data structures to represent J1 programs")
+print(">"*8, "task 17: Write a function that emit HL-J1 programs as LL-J1 programs")
 print("="*80)
 
 print("high-level python code seems to be quite low-level, yes we shall see..")
