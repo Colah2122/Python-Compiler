@@ -2,9 +2,37 @@
 from abc import ABC, abstractmethod
 import re
 import sys
+import copy
 
 debug = 1
 primAll = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
+
+myFunc = {}
+myVar = {}
+num = 0
+
+def clearDict():
+    global num
+    num = 0
+    myFunc.clear()
+    myVar.clear()
+
+def updateDict(name, varList, func):
+    if not "".join(varList).islower(): sys.exit("func " + name + " MUST only have lower case variables!")
+    if not name[0].isupper(): sys.exit("func " + name + " MUST start with a upper case letter!")
+    if name in myFunc: sys.exit("func " + name + " already defined??")
+    myFunc[name] = func
+    myVar[name] = varList
+
+def getFunction(name):
+    if name not in myFunc: sys.exit("func " + name + " not found")
+    expr = copy.deepcopy(myFunc[name])
+    varList = copy.copy(myVar[name])
+    if debug: print("FUNCTION", name + "(" + str(len(varList)) + "args)", ">>>>", expr)
+    return varList, expr
+
+def isFunction(name):
+    return True if name in myFunc else False
 
 class JExpr(ABC):
     def ppt(self):
@@ -21,6 +49,8 @@ class JNum(JExpr):
         self.eNum = int(eNum)
     def __str__(self):
         return str(self.eNum)
+    def __int__(self):
+        return int(self.eNum)
     def interp(self):
         return self.eNum
 
@@ -83,6 +113,17 @@ class JDelta(JExpr):
         else:
             sys.exit(self.prim + " not implemented?")
 
+class JFunc(JExpr):
+    def __init__(self, func, argList):
+        self.func = func
+        self.argList = argList
+        if not isFunction(self.func): sys.exit(self.func + " not defined?")
+        if not isinstance(self.argList, list): sys.exit("argList is not a list?")
+    def __str__(self):
+        return "(" + self.func + str(self.argList) + ")"
+    def interp(self):
+        pass
+
 def JCheck(e, expAns):
     actAns = e.interp()
     isCorrect = actAns == expAns
@@ -113,7 +154,6 @@ def reader(e):
     return se
 
 def desugar(se):
-    if debug and not isinstance(se, int): print("desugar=", se)
     if isinstance(se, int):
         return JNum(se)
     if isinstance(se, list):
@@ -134,9 +174,9 @@ def desugar(se):
         elif myLen == 2 and mySym == "-":
             return desugar(["*", -1, se[1]])
         elif myLen > 3 and mySym in ("+", "*", "-"):
-            copy = se
-            se =  copy.pop(1)
-            return desugar([mySym, se, copy])
+            l = se
+            se = l.pop(1)
+            return desugar([mySym, se, l])
         else:
             sys.exit("can't generate JExpr?")
 
@@ -332,7 +372,7 @@ def interpCK(se):
 
 se1 = []
 se1.append([19, 19])
-se1.append([[">=", 5, 3], True])
+se1.append([["=", 3, ["+", 2, 1]], True])
 se1.append([[">=", ["+", 8, ["*", 1, 3, 1, 1, 2]], 3], True])
 se1.append([[">=", 3, 5], False])
 se1.append([["+", 5, ["*", 2, -3]], -1])
@@ -350,12 +390,12 @@ se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
 
 print()
 print("="*80)
-print(">"*8, "task 20: Connect your test-suite to your CK0 interpreter to verify that it works")
+print(">"*8, "task 21: Define data structures to represent J2 programs and function definitions")
 print("="*80)
 
-for l in se1:
-    print("-"*50)
-    print("se=",l[0])
-    aCK0 = interpCK(l[0])
-    jBig = desugar(l[0])
-    JCheck(jBig,aCK0)
+updateDict("F", ["x"], ["+", "x", 2])
+updateDict("G", ["x", "y"], ["+", ["F", "x"],["F", "y"]])
+
+a = JFunc("G", [["+", 1, 2], 4])
+
+print("a=", a.ppt())
