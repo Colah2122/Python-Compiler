@@ -350,10 +350,12 @@ se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
 
 print()
 print("="*80)
-print(">"*8, "task 19: Implement the CK0 machine interpreter for J1")
+print(">"*8, "task 20: Connect your test-suite to your CK0 interpreter to verify that it works")
 print("="*80)
 
 for l in se1:
     print("-"*50)
     print("se=",l[0])
     aCK0 = interpCK(l[0])
+    jBig = desugar(l[0])
+    JCheck(jBig,aCK0)
