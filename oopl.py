@@ -237,6 +237,99 @@ class kapp(frame):
     def __str__(self):
         return "kapp(" + myStr(self.lVal) + ", " + myStr(self.lExpr) + ", " + str(self.frame) + ")"
 
+def findOppositeBracket(l):
+    cnt = 0
+    for i, item in enumerate(l):
+        if item == "[": cnt += 1
+        if item == "]": cnt -= 1
+        if cnt == 0: return i
+    return None
+
+def eatExpression(l):
+    e = []
+    if len(l) > 0:
+        if l[0] == "[":
+            start = l.index("[")
+            stop = findOppositeBracket(l)
+            e = l[start:stop+1]
+            del l[start:stop+1]
+        else:
+            e = l.pop(0)
+    return e
+
+def eatBracket(l):
+    l.pop(0)
+    sym = l.pop(0)
+    l.pop()
+    return sym
+
+class ck0:
+    def ppt(self):
+        return self.__str__();
+    def __init__(self, se):
+        self.c = ["["] + flatten(se) + ["]"]
+        self.k = kret()
+    def __str__(self):
+        aStr = " ".join(str(a) for a in self.c) if isinstance(self.c, list) else str(self.c)
+        return "< " + aStr + ", " + str(self.k) + " >"
+    def step(self):
+        if isinstance(self.c, list) and self.c[0] == "[":
+            if self.c[1] == "if":
+                if debug: print("rule 1")
+                eatBracket(self.c)
+                ec = eatExpression(self.c)
+                et = eatExpression(self.c)
+                ef = eatExpression(self.c)
+                self.k = kif(et, ef, self.k)
+                self.c = ec
+            elif self.c[1] in primAll:
+                if debug: print("rule 4")
+                c = eatBracket(self.c)
+                self.k = kapp([], self.c, self.k)
+                self.c = c
+            else:
+                if debug: print("rule 6")
+                c = eatBracket(self.c)
+                self.c = c
+        elif isinstance(self.k, kapp):
+            if len(self.k.lExpr) == 0:
+                if debug: print("rule 6")
+                l = list(reversed(self.k.lVal))
+                l.append(self.c)
+                j1 = desugar(l)
+                self.c = j1.interp()
+                self.k = self.k.frame
+            else:
+                if debug: print("rule 5")
+                self.k.lVal.insert(0, self.c)
+                self.c = eatExpression(self.k.lExpr)
+        elif isinstance(self.k, kif):
+            if bool(self.c) == True:
+                if debug: print("rule 3")
+                self.c = self.k.eTrue
+                self.k = self.k.frame
+            else:
+                if debug: print("rule 2")
+                self.c = self.k.eFalse
+                self.k = self.k.frame
+        else:
+            sys.exit("can't step no more??")
+
+def interpCK(se):
+    st = ck0(se)
+    print("inject")
+    print("st=", st)
+    cnt = 1
+    while(True):
+        st.step()
+        print("st", cnt, "=", st)
+        if isinstance(st.k, kret) and isinstance(st.c, int):
+            break
+        cnt += 1
+    print("extract")
+    print("ans=", st.c)
+    return st.c
+
 se1 = []
 se1.append([19, 19])
 se1.append([[">=", 5, 3], True])
@@ -257,13 +350,10 @@ se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
 
 print()
 print("="*80)
-print(">"*8, "task 18: Define data structures to represent continuations")
+print(">"*8, "task 19: Implement the CK0 machine interpreter for J1")
 print("="*80)
 
-a = kret()
-b = kif(5, 7, a)
-c = kapp([], ["+", 3, 4], b)
-
-print("a=", a)
-print("b=", b)
-print("c=", c)
+for l in se1:
+    print("-"*50)
+    print("se=",l[0])
+    aCK0 = interpCK(l[0])
