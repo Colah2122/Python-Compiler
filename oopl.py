@@ -215,12 +215,7 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 
 print()
 print("="*80)
-print(">"*8, "task 15: Implement a small-step interpreter for J1 using contexts")
+print(">"*8, "task 16: Define data structures to represent J1 programs")
 print("="*80)
 
-for l in se1:
-    print("-"*50)
-    print("se=",l[0])
-    aSmall = interpSS(l[0])
-    jBig = desugar(l[0])
-    JCheck(jBig,aSmall)
+print("high-level python code seems to be quite low-level, yes we shall see..")
