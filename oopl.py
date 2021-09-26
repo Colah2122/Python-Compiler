@@ -113,6 +113,24 @@ class JDelta(JExpr):
         else:
             sys.exit(self.prim + " not implemented?")
 
+def substitute1(n, v, expr):
+    for i, x in enumerate(expr):
+        if isinstance(x, list):
+            substitute1(n, v, x)
+        if x == v:
+            expr[i] = n
+
+def substituteList(argList, varList, expr):
+    if len(argList) != len(varList): sys.exit("incorrect numbr of args passed to function?")
+    for i, v in enumerate(varList):
+#        j2 = desugar(argList[i])
+#        n = j2.interp()
+        j2 = JNum(2)
+        n = argList[i]
+        if not isinstance(j2, JNum): print("****", "SIMPLIFY VARS", argList[i], "-->", n, "****")
+        if debug: print("PUT", n, "-->", v, "INTO",  expr)
+        substitute1(n, v, expr)
+
 class JFunc(JExpr):
     def __init__(self, func, argList):
         self.func = func
@@ -426,13 +444,11 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
 
 print()
 print("="*80)
-print(">"*8, "task 22: Write a test-suite of a dozen J2 programs")
+print(">"*8, "task 23: Define a substitution function that plugs the value of a variable into references to that variable")
 print("="*80)
 
-for l in se1:
-    clearDict()
-    print()
-    print("="*80)
-    print("="*80)
-    ans = l.pop()
-    print(l, ">>>", ans, "?????")
+print()
+e1 = ["+", "a", "b", ["+", "c", ["+", "d", "e", ["+","f", "g"]]], "h"]
+print("Before=", e1)
+substituteList(["a", "b", "c", "d", "e", "f", "g", "h"], [1, 2, 3, 4, 5, 6, 7, 8], e1)
+print("After=", e1)
