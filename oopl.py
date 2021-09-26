@@ -123,10 +123,8 @@ def substitute1(n, v, expr):
 def substituteList(argList, varList, expr):
     if len(argList) != len(varList): sys.exit("incorrect numbr of args passed to function?")
     for i, v in enumerate(varList):
-#        j2 = desugar(argList[i])
-#        n = j2.interp()
-        j2 = JNum(2)
-        n = argList[i]
+        j2 = desugar(argList[i])
+        n = j2.interp()
         if not isinstance(j2, JNum): print("****", "SIMPLIFY VARS", argList[i], "-->", n, "****")
         if debug: print("PUT", n, "-->", v, "INTO",  expr)
         substitute1(n, v, expr)
@@ -140,7 +138,20 @@ class JFunc(JExpr):
     def __str__(self):
         return "(" + self.func + str(self.argList) + ")"
     def interp(self):
-        pass
+        global num
+        varList, expr = getFunction(self.func)
+        substituteList(self.argList, varList, expr)
+        if debug: print(">>>>", "AFTER", expr)
+        if expr[0] == "if":
+            ek = desugar(expr[1])
+            i = 2 if ek.interp() else 3
+            num += 1
+            print("*"*80)
+            print("*"*4, "IF", expr[1], ">>>", ek.interp(), "RECURSIVE CALL", num, ":", expr[i])
+            print("*"*80)
+            expr = expr[i]
+        j2 = desugar(expr)
+        return j2.interp()
 
 def JCheck(e, expAns):
     actAns = e.interp()
@@ -175,10 +186,26 @@ def desugar(se):
     if isinstance(se, int):
         return JNum(se)
     if isinstance(se, list):
+        cnt = 0
+        for item in se:
+            if isinstance(item, list) and item[0] == "define":
+                cnt += 1
+                if debug: print("func=",item)
+                name = item[1].pop(0)
+                updateDict(name, item[1], item[2])
+            else:
+                break
+        if cnt > 0: se = se[cnt]
+        if debug:
+            print("-"*50)
+            print("desugar=", se)
         myLen = len(se)
         mySym = str(se[0])
         if isinstance(se[0], int):
             return JNum(se[0])
+        elif isFunction(mySym):
+            se.pop(0)
+            return JFunc(mySym, se)
         elif myLen == 3 and mySym in primAll:
             return JDelta(mySym, desugar(se[1]), desugar(se[2]))
         elif myLen == 4 and mySym in "if":
@@ -444,11 +471,14 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
 
 print()
 print("="*80)
-print(">"*8, "task 23: Define a substitution function that plugs the value of a variable into references to that variable")
+print(">"*8, "task 24: Extend your big-step interpreter to evaluate J2 programs")
 print("="*80)
 
-print()
-e1 = ["+", "a", "b", ["+", "c", ["+", "d", "e", ["+","f", "g"]]], "h"]
-print("Before=", e1)
-substituteList(["a", "b", "c", "d", "e", "f", "g", "h"], [1, 2, 3, 4, 5, 6, 7, 8], e1)
-print("After=", e1)
+for l in se1:
+    clearDict()
+    print()
+    print("="*80)
+    print("="*80)
+    print(l)
+    j2 = desugar(l[0])
+    JCheck(j2, l[1])
