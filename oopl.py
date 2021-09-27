@@ -471,14 +471,7 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
 
 print()
 print("="*80)
-print(">"*8, "task 24: Extend your big-step interpreter to evaluate J2 programs")
+print(">"*8, "task 25: Define a substitution function that plugs the value of a variable into references to that variable")
 print("="*80)
 
-for l in se1:
-    clearDict()
-    print()
-    print("="*80)
-    print("="*80)
-    print(l)
-    j2 = desugar(l[0])
-    JCheck(j2, l[1])
+print("skipping, high-level python code seems to be quite low-level, yes we shall see..")
