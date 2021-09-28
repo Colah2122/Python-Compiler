@@ -121,11 +121,12 @@ def substitute1(n, v, expr):
             expr[i] = n
 
 def substituteList(argList, varList, expr):
-    if len(argList) != len(varList): sys.exit("incorrect numbr of args passed to function?")
+    if not isinstance(argList, list): argList = [argList]
+    if len(argList) != len(varList): sys.exit("incorrect number of args passed to function?")
     for i, v in enumerate(varList):
         j2 = desugar(argList[i])
         n = j2.interp()
-        if not isinstance(j2, JNum): print("****", "SIMPLIFY VARS", argList[i], "-->", n, "****")
+        if not isinstance(j2, JNum) and debug: print("****", "SIMPLIFY VARS", argList[i], "-->", n, "****")
         if debug: print("PUT", n, "-->", v, "INTO",  expr)
         substitute1(n, v, expr)
 
@@ -146,9 +147,9 @@ class JFunc(JExpr):
             ek = desugar(expr[1])
             i = 2 if ek.interp() else 3
             num += 1
-            print("*"*80)
-            print("*"*4, "IF", expr[1], ">>>", ek.interp(), "RECURSIVE CALL", num, ":", expr[i])
-            print("*"*80)
+            if debug: print("*"*80)
+            if debug: print("*"*4, "IF", expr[1], ">>>", ek.interp(), "RECURSIVE CALL", num, ":", expr[i])
+            if debug: print("*"*80)
             expr = expr[i]
         j2 = desugar(expr)
         return j2.interp()
@@ -182,23 +183,28 @@ def reader(e):
     se = parseList(tokens)
     return se
 
+def eatDefinitions(se):
+    if not isinstance(se, list): return se
+    cnt = 0
+    for item in se:
+        if isinstance(item, list) and item[0] == "define":
+            cnt += 1
+            if debug: print("func=",item)
+            name = item[1].pop(0)
+            updateDict(name, item[1], item[2])
+        else:
+            break
+    if cnt > 0: se = se[cnt]
+    if debug:
+        if debug: print("-"*50)
+        if debug: print("desugar=", se)
+    return se
+
 def desugar(se):
     if isinstance(se, int):
         return JNum(se)
     if isinstance(se, list):
-        cnt = 0
-        for item in se:
-            if isinstance(item, list) and item[0] == "define":
-                cnt += 1
-                if debug: print("func=",item)
-                name = item[1].pop(0)
-                updateDict(name, item[1], item[2])
-            else:
-                break
-        if cnt > 0: se = se[cnt]
-        if debug:
-            print("-"*50)
-            print("desugar=", se)
+        se = eatDefinitions(se)
         myLen = len(se)
         mySym = str(se[0])
         if isinstance(se[0], int):
@@ -367,21 +373,31 @@ class ck0:
                 ef = eatExpression(self.c)
                 self.k = kif(et, ef, self.k)
                 self.c = ec
-            elif self.c[1] in primAll:
+            elif self.c[1] in primAll or isFunction(self.c[1]):
                 if debug: print("rule 4")
                 c = eatBracket(self.c)
                 self.k = kapp([], self.c, self.k)
                 self.c = c
             else:
-                if debug: print("rule 6")
+                if debug: print("rule 6a")
                 c = eatBracket(self.c)
                 self.c = c
         elif isinstance(self.k, kapp):
-            if len(self.k.lExpr) == 0:
-                if debug: print("rule 6")
-                l = list(reversed(self.k.lVal))
-                l.append(self.c)
-                j1 = desugar(l)
+            if not self.k.lExpr and isFunction(self.k.lVal[-1]) and isinstance(self.c, int):
+                if debug: print("rule 7")
+                varList, expr = getFunction(self.k.lVal[-1])
+                self.k.lVal.insert(0, self.c)
+                n = list(reversed(self.k.lVal))
+                n.pop(0)    # remove func name
+                substituteList(n, varList, expr)
+                if debug: print(">>>>", "AFTER", expr)
+                self.c = ["["] + flatten(expr) + ["]"]
+                self.k = self.k.frame
+            elif not self.k.lExpr:
+                if debug: print("rule 6b")
+                self.k.lVal.insert(0, self.c)
+                n = list(reversed(self.k.lVal))
+                j1 = desugar(n)
                 self.c = j1.interp()
                 self.k = self.k.frame
             else:
@@ -401,6 +417,7 @@ class ck0:
             sys.exit("can't step no more??")
 
 def interpCK(se):
+    se = eatDefinitions(se)
     st = ck0(se)
     print("inject")
     print("st=", st)
@@ -467,11 +484,25 @@ se1.append([[["define", ["FibN", "n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n"
 se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", ["-", "n", 1]]]],
              ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
              ["IsOdd", [7]]], True])
+se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
+             ["Double", ["Double", 1]]], 4])
 
 
 print()
 print("="*80)
-print(">"*8, "task 25: Define a substitution function that plugs the value of a variable into references to that variable")
+print(">"*8, "task 26: Extend your CK0 machine into the CK1 to evaluate J2 programs")
 print("="*80)
 
-print("skipping, high-level python code seems to be quite low-level, yes we shall see..")
+for l in se1:
+    print()
+    print("="*80)
+    print("="*80)
+    print(l)
+    myL = copy.deepcopy(l[0])
+    debug = 1
+    clearDict()
+    aCK1 = interpCK(l[0])
+    debug = 0
+    clearDict()
+    jBig = desugar(myL)
+    JCheck(jBig, aCK1)
