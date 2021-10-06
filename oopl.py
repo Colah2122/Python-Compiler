@@ -113,22 +113,26 @@ class JDelta(JExpr):
         else:
             sys.exit(self.prim + " not implemented?")
 
-def substitute1(n, v, expr):
-    for i, x in enumerate(expr):
-        if isinstance(x, list):
-            substitute1(n, v, x)
-        if x == v:
-            expr[i] = n
+def substitute1(num, var, expr):
+    cnt = 0
+    if not isinstance(expr, list): return cnt
+    for i, e2 in enumerate(expr):
+        if isinstance(e2, list):
+            cnt += substitute1(num, var, e2)
+        if e2 == var:
+            expr[i] = num
+            cnt += 1
+    return cnt
 
-def substituteList(argList, varList, expr):
-    if not isinstance(argList, list): argList = [argList]
-    if len(argList) != len(varList): sys.exit("incorrect number of args passed to function?")
-    for i, v in enumerate(varList):
-        j2 = desugar(argList[i])
-        n = j2.interp()
-        if not isinstance(j2, JNum) and debug: print("****", "SIMPLIFY VARS", argList[i], "-->", n, "****")
-        if debug: print("PUT", n, "-->", v, "INTO",  expr)
-        substitute1(n, v, expr)
+def substituteList(envDict, expr):
+    cnt = 0
+    for var, arg in envDict.items():
+        j2 = desugar(arg)
+        num = j2.interp()
+        if not isinstance(j2, JNum) and debug: print("****", "SIMPLIFY VARS", arg, "-->", num, "****")
+        cnt += substitute1(num, var, expr)
+        if debug and cnt > 0: print("PUT", num, "-->", var, "INTO",  expr)
+    return cnt
 
 class JFunc(JExpr):
     def __init__(self, func, argList):
@@ -141,7 +145,9 @@ class JFunc(JExpr):
     def interp(self):
         global num
         varList, expr = getFunction(self.func)
-        substituteList(self.argList, varList, expr)
+        if len(self.argList) != len(varList): sys.exit("incorrect number of args passed to function?")
+        envDict = dict(zip(varList, self.argList))
+        substituteList(envDict, expr)
         if debug: print(">>>>", "AFTER", expr)
         if expr[0] == "if":
             ek = desugar(expr[1])
@@ -232,15 +238,15 @@ def desugar(se):
             sys.exit("can't generate JExpr?")
 
 def flatten(aList):
+    if not isinstance(aList, list):
+        return aList
     result = []
-    if isinstance(aList, int):
-        return [aList]
     for element in aList:
         if hasattr(element, "__iter__") and not isinstance(element, str):
-            result.extend(["["] + flatten(element) + ["]"])
+            result.extend(flatten(element))
         else:
             result.append(element)
-    return result
+    return result[0] if len(result) == 1 else ["["] + result + ["]"]
 
 def plugHole(ans, context):
     if debug: print("context=",context)
@@ -295,6 +301,10 @@ def myStr(l):
         if l[-1] != "]": s1 = s1 + "]"
         s2 = s1.replace("[ ", "[").replace(" ]", "]")
         return s2
+    if isinstance(l, dict):
+        if len(l) == 0: return "mt"
+        s3 = ','.join('='.join((key,str(val))) for (key,val) in l.items())
+        return "{" + s3 + "}"
     return str(l)
 
 class frame(ABC):
@@ -309,24 +319,28 @@ class kret(frame):
         return "kret"
 
 class kif(frame):
-    def __init__(self, eTrue, eFalse, k):
+    def __init__(self, eDict, eTrue, eFalse, k):
+        if not isinstance(eDict, dict): sys.exit("eDict must be a dict?")
         if not isinstance(k, frame): sys.exit("k must be a frame?")
+        self.env = eDict
         self.eTrue = eTrue
         self.eFalse = eFalse
         self.frame = k
     def __str__(self):
-        return "kif(" + myStr(self.eTrue) + ", " + myStr(self.eFalse) + ", " + str(self.frame) + ")"
+        return "kif(" + myStr(self.env) + ", " + myStr(self.eTrue) + ", " + myStr(self.eFalse) + ", " + str(self.frame) + ")"
 
 class kapp(frame):
-    def __init__(self, lVal, lExpr, k):
+    def __init__(self, lVal, eDict, lExpr, k):
         if not isinstance(lVal, list): sys.exit("lVal must be a list?")
+        if not isinstance(eDict, dict): sys.exit("eDict must be a dict?")
         if not isinstance(lExpr, list): sys.exit("lExpr must be a list?")
         if not isinstance(k, frame): sys.exit("k must be a frame?")
         self.lVal = lVal
+        self.env = eDict
         self.lExpr = lExpr
         self.frame = k
     def __str__(self):
-        return "kapp(" + myStr(self.lVal) + ", " + myStr(self.lExpr) + ", " + str(self.frame) + ")"
+        return "kapp(" + myStr(self.lVal) + ", " + myStr(self.env) + ", " + myStr(self.lExpr) + ", " + str(self.frame) + ")"
 
 def findOppositeBracket(l):
     cnt = 0
@@ -354,80 +368,91 @@ def eatBracket(l):
     l.pop()
     return sym
 
-class ck0:
+class cek0:
     def ppt(self):
         return self.__str__();
     def __init__(self, se):
-        self.c = ["["] + flatten(se) + ["]"]
+        self.c = flatten(se)
+        self.env = dict()
         self.k = kret()
     def __str__(self):
         aStr = " ".join(str(a) for a in self.c) if isinstance(self.c, list) else str(self.c)
-        return "< " + aStr + ", " + str(self.k) + " >"
+        return "< " + aStr + ", " + myStr(self.env) + ", " + str(self.k) + " >"
     def step(self):
-        if isinstance(self.c, list) and self.c[0] == "[":
-            if self.c[1] == "if":
-                if debug: print("rule 1")
-                eatBracket(self.c)
-                ec = eatExpression(self.c)
-                et = eatExpression(self.c)
-                ef = eatExpression(self.c)
-                self.k = kif(et, ef, self.k)
-                self.c = ec
-            elif self.c[1] in primAll or isFunction(self.c[1]):
-                if debug: print("rule 4")
-                c = eatBracket(self.c)
-                self.k = kapp([], self.c, self.k)
-                self.c = c
-            else:
-                if debug: print("rule 6a")
-                c = eatBracket(self.c)
-                self.c = c
-        elif isinstance(self.k, kapp):
-            if not self.k.lExpr and isFunction(self.k.lVal[-1]) and isinstance(self.c, int):
-                if debug: print("rule 7")
-                varList, expr = getFunction(self.k.lVal[-1])
-                self.k.lVal.insert(0, self.c)
-                n = list(reversed(self.k.lVal))
-                n.pop(0)    # remove func name
-                substituteList(n, varList, expr)
-                if debug: print(">>>>", "AFTER", expr)
-                self.c = ["["] + flatten(expr) + ["]"]
-                self.k = self.k.frame
-            elif not self.k.lExpr:
-                if debug: print("rule 6b")
-                self.k.lVal.insert(0, self.c)
-                n = list(reversed(self.k.lVal))
-                j1 = desugar(n)
-                self.c = j1.interp()
-                self.k = self.k.frame
-            else:
-                if debug: print("rule 5")
-                self.k.lVal.insert(0, self.c)
-                self.c = eatExpression(self.k.lExpr)
-        elif isinstance(self.k, kif):
-            if bool(self.c) == True:
-                if debug: print("rule 3")
-                self.c = self.k.eTrue
-                self.k = self.k.frame
-            else:
-                if debug: print("rule 2")
-                self.c = self.k.eFalse
-                self.k = self.k.frame
+        if isinstance(self.c, list) and self.c[1] == "if":
+            if debug: print("rule 1")
+            eatBracket(self.c)    # remove if
+            ec = eatExpression(self.c)
+            et = eatExpression(self.c)
+            ef = eatExpression(self.c)
+            self.k = kif(self.env.copy(), et, ef, self.k)
+            self.c = ec
+        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1])):
+            if debug: print("rule 4")
+            c = eatBracket(self.c)
+            self.k = kapp([], self.env.copy(), self.c, self.k)
+            self.c = c
+        elif isinstance(self.k, kif) and bool(self.c) == False:
+            if debug: print("rule 2")
+            self.c = self.k.eFalse
+            self.env = self.k.env
+            self.k = self.k.frame
+        elif isinstance(self.k, kif) and bool(self.c) == True:
+            if debug: print("rule 3")
+            self.c = self.k.eTrue
+            self.env = self.k.env
+            self.k = self.k.frame
+        elif isinstance(self.c, str) and self.c.islower():
+            if debug: print("rule 8")
+#            sys.exit("rule 8!")
+            expr = list(self.c)
+            cnt = substituteList(self.env, expr)
+            if debug: print(">>>>", "AFTER", expr)
+            if cnt == 0: sys.exit("rule 8, no substitutions??")
+            self.c = expr.pop()
+            self.env = dict()
+        elif isinstance(self.k, kapp) and self.k.lExpr:
+            if debug: print("rule 5")
+            self.env = self.k.env
+            self.k.lVal.insert(0, self.c)
+            self.c = eatExpression(self.k.lExpr)
+        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal[-1] in primAll:
+            if debug: print("rule 6")
+            self.k.lVal.insert(0, self.c)
+            n = list(reversed(self.k.lVal))
+            j1 = desugar(n)
+            self.c = j1.interp()
+            self.env = dict()
+            self.k = self.k.frame
+        elif isinstance(self.k, kapp) and not self.k.lExpr and isFunction(self.k.lVal[-1]):
+            if debug: print("rule 7")
+            varList, expr = getFunction(self.k.lVal[-1])
+            self.k.lVal.insert(0, self.c)
+            n = list(reversed(self.k.lVal))
+            n.pop(0)    # remove func name
+            if len(n) != len(varList): sys.exit("incorrect number of args passed to function?")
+            envDict = dict(zip(varList, n))
+#            substituteList(envDict, expr)
+#            if debug: print(">>>>", "AFTER", expr)
+            self.c = flatten(expr)
+            self.env = envDict
+            self.k = self.k.frame
         else:
             sys.exit("can't step no more??")
 
-def interpCK(se):
+def interpCEK(se):
     se = eatDefinitions(se)
-    st = ck0(se)
+    st = cek0(se)
+    cnt = 0
     print("inject")
-    print("st=", st)
-    cnt = 1
+    print("    ", st, "<<<<", "st" + str(cnt))
     while(True):
-        st.step()
-        print("st", cnt, "=", st)
+#        if cnt > 25: sys.exit("too many!!!")
         if isinstance(st.k, kret) and isinstance(st.c, int):
             break
         cnt += 1
+        st.step()
+        print("    ", st, "<<<<", "st" + str(cnt))
     print("extract")
     print("ans=", st.c)
     return st.c
@@ -483,14 +508,14 @@ se1.append([[["define", ["FibN", "n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n"
              ["FibN", 5]], 5])
 se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", ["-", "n", 1]]]],
              ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
-             ["IsOdd", [7]]], True])
+             ["IsOdd", 7]], True])
 se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
              ["Double", ["Double", 1]]], 4])
 
 
 print()
 print("="*80)
-print(">"*8, "task 26: Extend your CK0 machine into the CK1 to evaluate J2 programs")
+print(">"*8, "task 27: Modify your CK1 machine into the CEK0 machine")
 print("="*80)
 
 for l in se1:
@@ -501,7 +526,7 @@ for l in se1:
     myL = copy.deepcopy(l[0])
     debug = 1
     clearDict()
-    aCK1 = interpCK(l[0])
+    aCK1 = interpCEK(l[0])
     debug = 0
     clearDict()
     jBig = desugar(myL)
