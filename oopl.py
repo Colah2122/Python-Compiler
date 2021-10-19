@@ -430,18 +430,27 @@ se1.append([[["define", ["FibN", "n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n"
 se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", ["-", "n", 1]]]],
              ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
              ["IsOdd", 7]], True])
+del se1[-7:]
 #se1.clear()
 #se1.append([[["define", ["F", "x"], ["y"]],
 #             ["define", ["G", "y"], ["F", 0]],
 #             ["G", 1]], "ERROR"])
 #se1.append([[["define", ["F", "x"], True],
 #             ["if", ["F", 0], "x", "x"]], "ERROR"])
+se1.append([["let", ["x", 8], "in", ["let", ["y", 7], "in", ["+", "x", "y"]]], 15])
+se1.append([["let", ["x", 8], "in", ["let", ["x", ["+", "x", 1]], "in", ["+", "x", "x"]]], 18])
+se1.append([["let", ["F", ["let", ["x", 1], "in", ["lambda", "y", ["+", "x", "y"]]]], "in", ["F", 3]], 4])
+se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "y", ["+", "x", "y"]]], "in", ["F", 0]]], 5])
+se1.append([["let", ["F", ["lambda", "y", ["+", 5, "y"]]], "in", ["F", 0]], 5])
+se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "x", ["+", "x", 10]]], "in", ["F", 0]]], 10])    # shadowing example
+se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "y", ["+", "x", "y"]]], "in", ["F", 0]]], 5])    # closure example
+se1.append([["let", ["F", ["let", ["x", 5], "in", ["lambda", "y", ["+", "x", "y"]]]], "in", ["F", 0]], 5])    # final more complex example
+se1.append([["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", 0]]]], 3])
+se1.append([["let", ["x", 0], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", "x"]]]]], 3])
+se1.append([["let", ["n", 3], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", ["+", 0, "n"]]]]]], 6])
 
 
 print()
 print("="*80)
-print(">"*8, "task 31: Define data structures to represent J3 programs and runtime values")
+print(">"*8, "task 32: Write a test-suite of a dozen J3 programs")
 print("="*80)
-
-lam = JLambda(["F"], ["F", 3])
-print(lam)
