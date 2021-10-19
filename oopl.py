@@ -295,6 +295,23 @@ class cek0:
         print("type(self.c)=", type(self.c))
         print("self.env=", self.env)
         print("self.k=", self.k)
+    def desugar(self):
+        if isinstance(self.c, list) and (self.c[1] == "let" or self.c[0] == "let"):
+            if debug: print(">>>> DESUGAR LET >>>>")
+            eatBracket(self.c)    # remove let
+            ec = eatExpression(self.c)
+            var = eatBracket(ec)
+            i = self.c.pop(0)    # remove in
+            if i != "in": sys.exit("cant find let in??")
+            eb = self.c
+            lam = JLambda([var], eb)
+            ec.insert(0,lam)
+            ec.insert(0,"[")
+            ec.append("]")
+            self.c = ec
+            print("ec=",ec)
+            print("eb=",eb)
+            if debug: print("self.c=", self.c)
     def step(self):
         if isinstance(self.c, list) and self.c[1] == "if":
             if debug: print(">>>> RULE 1 >>>>")
@@ -370,10 +387,11 @@ def interpCEK(se):
             break
         cnt += 1
         if debug: st.dump()
-        st.step()
+        st.desugar()
         print("    ", st, "<<<<", "st" + str(cnt))
-    print("extract")
-    print("ans=", st.c)
+        break
+#    print("extract")
+#    print("ans=", st.c)
     return st.c
 
 se1 = []
@@ -431,7 +449,7 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
              ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
              ["IsOdd", 7]], True])
 del se1[-7:]
-#se1.clear()
+se1.clear()
 #se1.append([[["define", ["F", "x"], ["y"]],
 #             ["define", ["G", "y"], ["F", 0]],
 #             ["G", 1]], "ERROR"])
@@ -449,8 +467,17 @@ se1.append([["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F
 se1.append([["let", ["x", 0], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", "x"]]]]], 3])
 se1.append([["let", ["n", 3], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", ["+", 0, "n"]]]]]], 6])
 
-
 print()
 print("="*80)
-print(">"*8, "task 32: Write a test-suite of a dozen J3 programs")
+print(">"*8, "task 33: Extend desugar to support let expressions")
 print("="*80)
+
+
+for l in se1:
+    print()
+    print("="*80)
+    print("="*80)
+    print(l)
+    debug = 1
+    clearDict()
+    CEKCheck(l[0], l[1])
