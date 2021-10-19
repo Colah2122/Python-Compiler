@@ -83,6 +83,16 @@ class JApp(JExpr):
         else:
             sys.exit(self.prim + " not implemented?")
 
+class JLambda(JExpr):
+    def __init__(self, lVar, eBody):
+        self.lVar = copy.deepcopy(lVar)
+        self.eBody = copy.deepcopy(eBody)
+        if not isinstance(lVar, list): sys.exit("lVar must be a list?")
+    def __str__(self):
+        return "lambda_" + "".join(self.lVar) + " " +  myStr(self.eBody)
+    def interp(self):
+        sys.exit("never8")
+
 def substitute1(num, var, expr):
     cnt = 0
     if not isinstance(expr, list): return cnt
@@ -141,6 +151,8 @@ def desugar(se):
         mySym = str(se[0])
         if isinstance(se[0], int):
             return JNum(se[0])
+        elif myLen > 3 and mySym == "lambda":
+            return JLambda([se[1]], se[2:])
         elif myLen == 3 and mySym in primAll:
             return JApp(mySym, desugar(se[1]), desugar(se[2]))
         elif myLen == 3 and mySym == "-":
@@ -428,14 +440,8 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
 
 print()
 print("="*80)
-print(">"*8, "task 30: Remove your big-step interpreter from the HL.")
+print(">"*8, "task 31: Define data structures to represent J3 programs and runtime values")
 print("="*80)
 
-for l in se1:
-    print()
-    print("="*80)
-    print("="*80)
-    print(l)
-    debug = 1
-    clearDict()
-    CEKCheck(l[0], l[1])
+lam = JLambda(["F"], ["F", 3])
+print(lam)
