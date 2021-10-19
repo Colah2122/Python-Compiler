@@ -168,6 +168,13 @@ def JCheck(e, expAns):
     print(e.ppt(), " = ", actAns, " >>> ", result)
     return isCorrect
 
+def CEKCheck(e, expAns):
+    actAns = interpCEK(e)
+    isCorrect = actAns == expAns
+    result = "CORRECT!!" if isCorrect else "FAILURE!!"
+    print(actAns, " = ", expAns, " >>> ", result)
+    return isCorrect
+
 def parseList(tokens):
     if debug: print("tokens=", tokens)
     stack = []
@@ -408,7 +415,7 @@ class cek0:
 #            sys.exit("rule 8!")
             expr = list(self.c)
             cnt = substituteList(self.env, expr)
-            if cnt == 0: sys.exit("rule 8, no substitutions??")
+            if cnt == 0: print(">>>>>>>>>> ERROR no substitutions?? >>>>>>>>>>>>>>>>>>>>>>>>")
             self.c = expr.pop()
             self.env = dict()
         elif isinstance(self.k, kapp) and self.k.lExpr:
@@ -447,8 +454,10 @@ def interpCEK(se):
     print("inject")
     print("    ", st, "<<<<", "st" + str(cnt))
     while(True):
-#        if cnt > 25: sys.exit("too many!!!")
+#        if cnt > 15: sys.exit("too many!!!")
         if isinstance(st.k, kret) and isinstance(st.c, int):
+            break
+        if isinstance(st.c, str) and st.c.islower() and not st.env:
             break
         cnt += 1
         st.step()
@@ -511,11 +520,17 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
              ["IsOdd", 7]], True])
 se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
              ["Double", ["Double", 1]]], 4])
+se1.clear()
+se1.append([[["define", ["F", "x"], ["y"]],
+             ["define", ["G", "y"], ["F", 0]],
+             ["G", 1]], "ERROR"])
+se1.append([[["define", ["F", "x"], True],
+             ["if", ["F", 0], "x", "x"]], "ERROR"])
 
 
 print()
 print("="*80)
-print(">"*8, "task 27: Modify your CK1 machine into the CEK0 machine")
+print(">"*8, "task 28: Write test cases that verify your CEK0 machine does NOT have dynamic scope")
 print("="*80)
 
 for l in se1:
@@ -523,11 +538,6 @@ for l in se1:
     print("="*80)
     print("="*80)
     print(l)
-    myL = copy.deepcopy(l[0])
     debug = 1
     clearDict()
-    aCK1 = interpCEK(l[0])
-    debug = 0
-    clearDict()
-    jBig = desugar(myL)
-    JCheck(jBig, aCK1)
+    CEKCheck(l[0], l[1])
