@@ -403,12 +403,12 @@ class cek0:
         elif isinstance(self.k, kif) and bool(self.c) == False:
             if debug: print("rule 2")
             self.c = self.k.eFalse
-            self.env = self.k.env
+#            self.env = self.k.env
             self.k = self.k.frame
         elif isinstance(self.k, kif) and bool(self.c) == True:
             if debug: print("rule 3")
             self.c = self.k.eTrue
-            self.env = self.k.env
+#            self.env = self.k.env
             self.k = self.k.frame
         elif isinstance(self.c, str) and self.c.islower():
             if debug: print("rule 8")
@@ -417,10 +417,10 @@ class cek0:
             cnt = substituteList(self.env, expr)
             if cnt == 0: print(">>>>>>>>>> ERROR no substitutions?? >>>>>>>>>>>>>>>>>>>>>>>>")
             self.c = expr.pop()
-            self.env = dict()
+#            self.env = dict()
         elif isinstance(self.k, kapp) and self.k.lExpr:
             if debug: print("rule 5")
-            self.env = self.k.env
+#            self.env = self.k.env
             self.k.lVal.insert(0, self.c)
             self.c = eatExpression(self.k.lExpr)
         elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal[-1] in primAll:
@@ -429,7 +429,7 @@ class cek0:
             n = list(reversed(self.k.lVal))
             j1 = desugar(n)
             self.c = j1.interp()
-            self.env = dict()
+#            self.env = dict()
             self.k = self.k.frame
         elif isinstance(self.k, kapp) and not self.k.lExpr and isFunction(self.k.lVal[-1]):
             if debug: print("rule 7")
@@ -439,10 +439,10 @@ class cek0:
             n.pop(0)    # remove func name
             if len(n) != len(varList): sys.exit("incorrect number of args passed to function?")
             envDict = dict(zip(varList, n))
-#            substituteList(envDict, expr)
-#            if debug: print(">>>>", "AFTER", expr)
+            substituteList(envDict, expr)
+            if debug: print(">>>>", "AFTER", expr)
             self.c = flatten(expr)
-            self.env = envDict
+            self.env.update(envDict)
             self.k = self.k.frame
         else:
             sys.exit("can't step no more??")
@@ -530,7 +530,7 @@ se1.append([[["define", ["F", "x"], True],
 
 print()
 print("="*80)
-print(">"*8, "task 28: Write test cases that verify your CEK0 machine does NOT have dynamic scope")
+print(">"*8, "task 29: Make a tweak to the CEK0 machine to give it dynamic scope, commit that, then revert it")
 print("="*80)
 
 for l in se1:
