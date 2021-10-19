@@ -278,6 +278,17 @@ def eatBracket(l):
     sym = l.pop(0)
     return sym
 
+class closure:
+    def ppt(self):
+        return self.__str__();
+    def __init__(self, lam, eDict):
+        if not isinstance(lam, JLambda): sys.exit("lam must be JLambda?")
+        if not isinstance(eDict, dict): sys.exit("eDict must be a dict?")
+        self.lam = copy.deepcopy(lam)
+        self.env = copy.deepcopy(eDict)
+    def __str__(self):
+        return "clo(" + str(self.lam) + ", " + myStr(self.env) + ")"
+
 class cek0:
     def ppt(self):
         return self.__str__();
@@ -309,8 +320,13 @@ class cek0:
             ec.insert(0,"[")
             ec.append("]")
             self.c = ec
-            print("ec=",ec)
-            print("eb=",eb)
+            if debug: print("self.c=", self.c)
+        elif isinstance(self.c, list) and self.c[1] == "lambda":
+            if debug: print(">>>> DESUGAR LAMBDA >>>>")
+            eatBracket(self.c)
+            var = self.c.pop(0)
+            lam = JLambda([var], self.c)
+            self.c = lam
             if debug: print("self.c=", self.c)
     def step(self):
         if isinstance(self.c, list) and self.c[1] == "if":
@@ -321,7 +337,30 @@ class cek0:
             ef = eatExpression(self.c)
             self.k = kif(self.env, et, ef, self.k)
             self.c = ec
-        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1])):
+        elif isinstance(self.k, kapp) and isinstance(self.c, JLambda):
+            if debug: print(">>>> RULE LAMBDA >>>>")
+            clo = closure(self.c, self.env)
+            self.c = clo
+            self.env = dict()
+        elif isinstance(self.k, kapp) and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isinstance(self.c, int) or isinstance(self.c, JLambda) or isinstance(self.c, closure)):
+            if debug: print(">>>> RULE CLOSURE >>>>")
+            clo = self.k.lVal[-1]
+            f = "".join(clo.lam.lVar)
+            num = substituteList(clo.env, self.c)
+            self.env = clo.env
+            self.env[f] = self.c
+            eb = clo.lam.eBody
+            if eb[1] == "lambda":
+                eb.pop(0)
+                eb.pop()
+                eb = desugar(eb)
+            if isinstance(eb, list) and eb[0] != "[":
+                eb.insert(0, "[")
+                eb.append("]")
+            self.c = eb
+            self.k = self.k.frame
+            self.k.env = dict()
+        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1]) or isinstance(self.c[1], JLambda) or isinstance(self.c[1], closure)):
             if debug: print(">>>> RULE 4 >>>>")
             c = eatBracket(self.c)
             self.k = kapp([], self.env, self.c, self.k)
@@ -388,10 +427,10 @@ def interpCEK(se):
         cnt += 1
         if debug: st.dump()
         st.desugar()
+        st.step()
         print("    ", st, "<<<<", "st" + str(cnt))
-        break
-#    print("extract")
-#    print("ans=", st.c)
+    print("extract")
+    print("ans=", st.c)
     return st.c
 
 se1 = []
@@ -449,7 +488,7 @@ se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", [
              ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
              ["IsOdd", 7]], True])
 del se1[-7:]
-se1.clear()
+#se1.clear()
 #se1.append([[["define", ["F", "x"], ["y"]],
 #             ["define", ["G", "y"], ["F", 0]],
 #             ["G", 1]], "ERROR"])
@@ -469,7 +508,7 @@ se1.append([["let", ["n", 3], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]
 
 print()
 print("="*80)
-print(">"*8, "task 33: Extend desugar to support let expressions")
+print(">"*8, "task 34: Extend CEK0 to CEK1 to evaluate J3 programs")
 print("="*80)
 
 
