@@ -84,12 +84,14 @@ class JApp(JExpr):
             sys.exit(self.prim + " not implemented?")
 
 class JLambda(JExpr):
-    def __init__(self, lVar, eBody):
+    def __init__(self, name, lVar, eBody):
+        self.name = name
         self.lVar = copy.deepcopy(lVar)
         self.eBody = copy.deepcopy(eBody)
+        if not isinstance(name, str): sys.exit("name must be a string?")
         if not isinstance(lVar, list): sys.exit("lVar must be a list?")
     def __str__(self):
-        return "lambda_" + "".join(self.lVar) + " " +  myStr(self.eBody)
+        return "lambda_" + self.name + myStr(self.lVar) + " " +  myStr(self.eBody)
     def interp(self):
         sys.exit("never8")
 
@@ -152,7 +154,12 @@ def desugar(se):
         if isinstance(se[0], int):
             return JNum(se[0])
         elif myLen > 3 and mySym == "lambda":
-            return JLambda([se[1]], se[2:])
+            name = eatLambda(se)
+            var = eatExpression(se)
+            if var[0] == "[":
+                var.pop(0)
+                var.pop()
+            return JLambda(name, var, se)
         elif myLen == 3 and mySym in primAll:
             return JApp(mySym, desugar(se[1]), desugar(se[2]))
         elif myLen == 3 and mySym == "-":
@@ -171,11 +178,11 @@ def flatten(aList):
         return aList
     result = []
     for element in aList:
-        if hasattr(element, "__iter__") and not isinstance(element, str):
+        if isinstance(element, list):
             result.extend(flatten(element))
         else:
             result.append(element)
-    return result[0] if len(result) == 1 else ["["] + result + ["]"]
+    return ["["] + result + ["]"]
 
 def plugHole(ans, context):
     if debug: print("context=",context)
@@ -206,8 +213,7 @@ def myStr(l):
     if isinstance(l, list):
         if len(l) == 0: return "[]"
         s1 = " ".join(str(x) for x in l)
-        if l[0] != "[": s1 = "[" +  s1
-        if l[-1] != "]": s1 = s1 + "]"
+        if l[0] != "[": s1 = "[" +  s1 + "]"
         s2 = s1.replace("[ ", "[").replace(" ]", "]")
         return s2
     if isinstance(l, dict):
@@ -258,6 +264,13 @@ def findOppositeBracket(l):
         if item == "]": cnt -= 1
         if cnt == 0: return i
     return None
+
+def eatLambda(l):
+    eatBracket(l)    # remove lambda
+    name = "rec"
+    if l[0] != "[":
+        name = l.pop(0)
+    return name
 
 def eatExpression(l):
     e = []
@@ -315,7 +328,7 @@ class cek0:
             i = self.c.pop(0)    # remove in
             if i != "in": sys.exit("cant find let in??")
             eb = self.c
-            lam = JLambda([var], eb)
+            lam = JLambda("rec", [var], eb)
             ec.insert(0,lam)
             ec.insert(0,"[")
             ec.append("]")
@@ -323,12 +336,16 @@ class cek0:
             if debug: print("self.c=", self.c)
         elif isinstance(self.c, list) and self.c[1] == "lambda":
             if debug: print(">>>> DESUGAR LAMBDA >>>>")
-            eatBracket(self.c)
-            var = self.c.pop(0)
-            lam = JLambda([var], self.c)
+            name = eatLambda(self.c)
+            var = eatExpression(self.c)
+            if len(self.c) == 1: self.c = self.c[0]
+            if var[0] == "[":
+                var.pop(0)
+                var.pop()
+            lam = JLambda(name, var, self.c)
             self.c = lam
             if debug: print("self.c=", self.c)
-    def step(self):
+    def step(self, cnt):
         if isinstance(self.c, list) and self.c[1] == "if":
             if debug: print(">>>> RULE 1 >>>>")
             eatBracket(self.c)    # remove if
@@ -340,29 +357,39 @@ class cek0:
         elif isinstance(self.k, kapp) and isinstance(self.c, JLambda):
             if debug: print(">>>> RULE LAMBDA >>>>")
             clo = closure(self.c, self.env)
+            clo.env[self.c.name] = copy.deepcopy(clo)
             self.c = clo
             self.env = dict()
-        elif isinstance(self.k, kapp) and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isinstance(self.c, int) or isinstance(self.c, JLambda) or isinstance(self.c, closure)):
+        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isinstance(self.c, int) or isinstance(self.c, JLambda) or isinstance(self.c, closure)):
             if debug: print(">>>> RULE CLOSURE >>>>")
             clo = self.k.lVal[-1]
-            f = "".join(clo.lam.lVar)
             num = substituteList(clo.env, self.c)
             self.env = clo.env
-            self.env[f] = self.c
+            self.k.lVal.insert(0, self.c)
+            name = clo.lam.name
+            for var in reversed(clo.lam.lVar):
+                self.env[var] = self.k.lVal.pop(0)
+            self.env[name] = copy.deepcopy(clo)
             eb = clo.lam.eBody
-            if eb[1] == "lambda":
-                eb.pop(0)
-                eb.pop()
-                eb = desugar(eb)
-            if isinstance(eb, list) and eb[0] != "[":
-                eb.insert(0, "[")
-                eb.append("]")
+            if isinstance(eb, list) and len(eb) > 1:
+                if eb[1] == "lambda":
+                    eb.pop(0)
+                    eb.pop()
+                    eb = desugar(eb)
+                if isinstance(eb, list) and eb[0] != "[":
+                    eb.insert(0, "[")
+                    eb.append("]")
             self.c = eb
             self.k = self.k.frame
             self.k.env = dict()
-        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1]) or isinstance(self.c[1], JLambda) or isinstance(self.c[1], closure)):
+        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1]) or isinstance(self.c[1], JLambda) or isinstance(self.c[1], closure) or self.c[1] == "["):
             if debug: print(">>>> RULE 4 >>>>")
-            c = eatBracket(self.c)
+            if self.c[1] == "[":
+                self.c.pop(0)
+                self.c.pop()
+                c = eatExpression(self.c)
+            else:
+                c = eatBracket(self.c)
             self.k = kapp([], self.env, self.c, self.k)
             self.c = c
         elif isinstance(self.k, kif) and bool(self.c) == False:
@@ -375,9 +402,10 @@ class cek0:
             self.c = self.k.eTrue
             self.env = self.k.env
             self.k = self.k.frame
-        elif (isinstance(self.c, str) and self.c.islower()) or (isinstance(self.c, list) and self.c[1] in self.env and self.c[1].isupper()):
+#        elif (isinstance(self.c, str) and self.c.islower()) or (isinstance(self.c, list) and self.c[1] in self.env and self.c[1].isupper()):
+        elif (isinstance(self.c, str) and self.c.islower()) or (isinstance(self.c, list) and self.c[1] in self.env):
             if debug: print(">>>> RULE 8 >>>>")
-            expr = self.c if isinstance(self.c, list) else list(self.c)
+            expr = self.c if isinstance(self.c, list) else [self.c]
             cnt = substituteList(self.env, expr)
             if cnt == 0: print(">>>>>>>>>> ERROR no substitutions?? >>>>>>>>>>>>>>>>>>>>>>>>")
             se = expr if isinstance(self.c, list) else expr.pop()
@@ -387,7 +415,9 @@ class cek0:
             if debug: print(">>>> RULE 5 >>>>")
             self.env = self.k.env
             self.k.lVal.insert(0, self.c)
-            self.c = eatExpression(self.k.lExpr)
+            var = eatExpression(self.k.lExpr)
+            if isinstance(var, list) and len(var) == 3: var = var[1]
+            self.c = var
         elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal[-1] in primAll:
             if debug: print(">>>> RULE 6 >>>>")
             self.k.lVal.insert(0, self.c)
@@ -419,7 +449,7 @@ def interpCEK(se):
     print("inject")
     print("    ", st, "<<<<", "st" + str(cnt))
     while(True):
-#        if cnt > 15: sys.exit("too many!!!")
+#        if cnt > 11: sys.exit("too many!!!")
         if isinstance(st.k, kret) and isinstance(st.c, int):
             break
         if isinstance(st.c, str) and st.c.islower() and not st.env:
@@ -427,96 +457,20 @@ def interpCEK(se):
         cnt += 1
         if debug: st.dump()
         st.desugar()
-        st.step()
+        st.step(cnt)
         print("    ", st, "<<<<", "st" + str(cnt))
     print("extract")
     print("ans=", st.c)
     return st.c
 
 se1 = []
-se1.append([19, 19])
-se1.append([["=", 3, ["+", 2, 1]], True])
-se1.append([[">=", ["+", 8, ["*", 1, 3, 1, 1, 2]], 3], True])
-se1.append([[">=", 3, 5], False])
-se1.append([["+", 5, ["*", 2, -3]], -1])
-se1.append([["if", ["<", 1, 3], ["if", [">", 4, 2], -3, -5], 15], -3])
-se1.append([["if", [">", 1, 3], ["if", [">", 4, 2], -3, -5], ["if", ["<", ["+", 2, 2], ["*", 3, 1]], -31, 4]], 4])
-se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, 5], -3], 9])
-se1.append([["+", 1, ["if", ["+", 2, 2], 3, 4]], 4])
-se1.append([["+", 1, ["if", ["+", 2, -2], 3, 4]], 5])
-se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 12])
-se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
-se1.append([["+", 1, ["*", 2, 10], -3, 5, ["if", ["=", 3, 3], 3, ["+", 4, 4]]], 26])
-se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
-se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
-se1.append([[["define", ["Simple", "n"], ["+", ["*", "n", 3], 4]],
-             ["Simple", 3]], 13]),
-se1.append([[["define", ["Simple", "a", "b", "c", "d", "e", "f", "g", "h"], ["+", "a", "b", "c", "d", "e", "f", "g", "h"]],
-             ["Simple", 1, 2, 3, 4, 5, 6, 7, 8]], 36]),
-se1.append([[["define", ["Plus1", "n"], ["+", "n", 1]],
-             ["define", ["Plus2", "n"], ["+", "n", 2]],
-             ["define", ["Plus3", "n"], ["+", "n", 3]],
-             ["define", ["Plus4", "n"], ["+", "n", 4]],
-             ["define", ["Plus5", "n"], ["+", "n", 5]],
-             ["+", ["Plus1", 5], ["Plus2", 4], ["Plus3", 3], ["Plus4", 2], ["Plus5", 1]]], 30])
-se1.append([[["define", ["Plus1", "n"], ["+", "n", 1]],
-             ["define", ["Plus2", "n"], ["+", "n", 2]],
-             ["define", ["Plus3", "n"], ["+", "n", 3]],
-             ["define", ["Plus4", "n"], ["+", "n", 4]],
-             ["define", ["Plus5", "n"], ["+", "n", 5]],
-             ["+", ["Plus1", ["Plus2", ["Plus3", ["Plus4", ["Plus5", 1]]]]], 12]], 28])
-se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
-             ["define", ["Quad", "y"], ["Double", ["Double", "y"]]],
-             ["Quad", ["+", 1, ["Double", 3]]]], 28])
-se1.append([[["define", ["Double", "x"], ["+", "x", "x"]],
-             ["Double", ["Double", 1]]], 4])
-se1.append([[["define", ["P", "n"], ["if", [">", "n", 0], ["+", 1, ["Q", ["-", "n", 1]]], 1]],
-             ["define", ["Q", "y"], ["if", [">", "y", 0], ["*", ["+", ["Q", ["-", "y", 1]], "y"], ["P", "y"]], 0]],
-             ["+", ["Q", 3], ["P", 3]]], 70])
-se1.append([[["define", ["ImN", "n"], ["n"]],
-             ["+", ["ImN", 4], ["ImN", 3], ["ImN", -3], ["ImN", 6]]], 10])
-se1.append([[["define", ["Factorial", "n"], ["if", ["=", "n", 1], 1, ["*", "n", ["Factorial", ["-", "n", 1]]]]],
-             ["+", 1, ["Factorial", 6]]], 721])
-se1.append([[["define", ["F", "x"], ["+", "x", 2]],
-             ["define", ["G", "x", "y"], ["+", ["F", "x"],["F", "y"]]],
-             ["G", ["+", 1, 2], 4]], 11])
-se1.append([[["define", ["Sum1toN", "n"], ["if", ["=", "n", 1], 1, ["+", "n", ["Sum1toN", ["+", "n", -1]]]]],
-             ["+", 1, ["Sum1toN", 5]]], 16])
-se1.append([[["define", ["FibN", "n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n", 1], 1, ["+", ["FibN", ["-", "n", 1]], ["FibN", ["-", "n", 2]]]]]],
-             ["FibN", 5]], 5])
-se1.append([[["define", ["IsEven", "n"], ["if", ["=", "n", 0], True, ["IsOdd", ["-", "n", 1]]]],
-             ["define", ["IsOdd", "n"], ["if", ["=", "n", 0], False, ["IsEven", ["-", "n", 1]]]],
-             ["IsOdd", 7]], True])
-del se1[-7:]
-#se1.clear()
-#se1.append([[["define", ["F", "x"], ["y"]],
-#             ["define", ["G", "y"], ["F", 0]],
-#             ["G", 1]], "ERROR"])
-#se1.append([[["define", ["F", "x"], True],
-#             ["if", ["F", 0], "x", "x"]], "ERROR"])
-se1.append([["let", ["x", 8], "in", ["let", ["y", 7], "in", ["+", "x", "y"]]], 15])
-se1.append([["let", ["x", 8], "in", ["let", ["x", ["+", "x", 1]], "in", ["+", "x", "x"]]], 18])
-se1.append([["let", ["F", ["let", ["x", 1], "in", ["lambda", "y", ["+", "x", "y"]]]], "in", ["F", 3]], 4])
-se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "y", ["+", "x", "y"]]], "in", ["F", 0]]], 5])
-se1.append([["let", ["F", ["lambda", "y", ["+", 5, "y"]]], "in", ["F", 0]], 5])
-se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "x", ["+", "x", 10]]], "in", ["F", 0]]], 10])    # shadowing example
-se1.append([["let", ["x", 5], "in", ["let", ["F", ["lambda", "y", ["+", "x", "y"]]], "in", ["F", 0]]], 5])    # closure example
-se1.append([["let", ["F", ["let", ["x", 5], "in", ["lambda", "y", ["+", "x", "y"]]]], "in", ["F", 0]], 5])    # final more complex example
-se1.append([["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", 0]]]], 3])
-se1.append([["let", ["x", 0], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", "x"]]]]], 3])
-se1.append([["let", ["n", 3], "in", ["let", ["F", ["lambda", "x", ["+", "x", 1]]], "in", ["F", ["F", ["F", ["+", 0, "n"]]]]]], 6])
+se1.append([[["lambda", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["rec", ["-", "n", 1]]]]], 6], 720])
 
 print()
 print("="*80)
-print(">"*8, "task 34: Extend CEK0 to CEK1 to evaluate J3 programs")
+print(">"*8, "task 36: Extend your J3 data structures to J4")
 print("="*80)
 
 
-for l in se1:
-    print()
-    print("="*80)
-    print("="*80)
-    print(l)
-    debug = 1
-    clearDict()
-    CEKCheck(l[0], l[1])
+lam = JLambda("Repeat", ["a", "b", "c"], ["[", "+", "a", "b", "c", "]"])
+print("lam=", lam)
