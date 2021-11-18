@@ -464,11 +464,35 @@ def interpCEK(se):
     return st.c
 
 se1 = []
-se1.append([[["lambda", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["rec", ["-", "n", 1]]]]], 6], 720])
+se1.append([19, 19])
+se1.append([["=", 3, ["+", 2, 1]], True])
+se1.append([[">=", ["+", 8, ["*", 1, 3, 1, 1, 2]], 3], True])
+se1.append([[">=", 3, 5], False])
+se1.append([["+", 5, ["*", 2, -3]], -1])
+se1.append([["if", ["<", 1, 3], ["if", [">", 4, 2], -3, -5], 15], -3])
+se1.append([["if", [">", 1, 3], ["if", [">", 4, 2], -3, -5], ["if", ["<", ["+", 2, 2], ["*", 3, 1]], -31, 4]], 4])
+se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, 5], -3], 9])
+se1.append([["+", 1, ["if", ["+", 2, 2], 3, 4]], 4])
+se1.append([["+", 1, ["if", ["+", 2, -2], 3, 4]], 5])
+se1.append([["if", ["<", ["-", 2, 1], 3], ["+", 4, ["-", 5, -3]], ["if", ["=", 4, 4], ["+", 3, 2], 7]], 12])
+se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
+se1.append([["+", 1, ["*", 2, 10], -3, 5, ["if", ["=", 3, 3], 3, ["+", 4, 4]]], 26])
+se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
+se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
+se1.append([[["lambda", "Simple", ["n"], ["+", ["*", "n", 3], 4]], 3], 13])
+se1.append([[["lambda", "Simple", ["a", "b", "c", "d", "e", "f", "g", "h"], ["+", "a", "b", "c", "d", "e", "f", "g", "h"]], 1, 2, 3, 4, 5, 6, 7, 8], 36])
+se1.append([["let", ["x", 8], "in", ["let", ["y", 7], "in", ["+", "x", "y"]]], 15])
+se1.append([["let", ["x", 8], "in", ["let", ["x", ["+", "x", 1]], "in", ["+", "x", "x"]]], 18])
+se1.append([[["lambda", "Repeat", ["i", "sum"], ["if", ["<", "i", 3], "i", "sum"]], 4, 6], 6])
+se1.append([["let", ["l", 5], "in", [["lambda", "R", ["i", "s"], ["if", ["<", "i", "l"], "i", "s"]], 4, 6]], 4])
+se1.append([[["lambda", "Fsum", ["n"], ["if", ["=", "n", 1], 1, ["+", "n", ["Fsum", ["-", "n", 1]]]]], 6], 21])
+se1.append([[["lambda", "R", ["i", "s"], ["if", ["<", "i", 5], ["R", ["+", "i", 1], ["+", "i", "s"]], "s"]], 0, 0], 10])
+se1.append([[["lambda", "Factorial", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["Factorial", ["-", "n", 1]]]]], 6], 720])
+se1.append([["let", ["last", 5], "in", [["lambda", "Repeat", ["i", "sum"], ["if", ["<", "i", "last"], ["Repeat", ["+", "i", 1], ["+", "i", "sum"]], "sum"]], 0, 0]], 10])
 
 print()
 print("="*80)
-print(">"*8, "task 37: Extend desugar to allow not mentioning the recursive name, as well as provide a default")
+print(">"*8, "task 38: Write a dozen test J3 programs, including extensions to your standard library")
 print("="*80)
 
 
@@ -476,7 +500,6 @@ for l in se1:
     print()
     print("="*80)
     print("="*80)
-    print(l)
+    ans = l.pop()
     debug = 1
-    clearDict()
-    CEKCheck(l[0], l[1])
+    print(l, ">>>", ans, "?????")
