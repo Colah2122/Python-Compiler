@@ -468,9 +468,15 @@ se1.append([[["lambda", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["rec", ["-",
 
 print()
 print("="*80)
-print(">"*8, "task 36: Extend your J3 data structures to J4")
+print(">"*8, "task 37: Extend desugar to allow not mentioning the recursive name, as well as provide a default")
 print("="*80)
 
 
-lam = JLambda("Repeat", ["a", "b", "c"], ["[", "+", "a", "b", "c", "]"])
-print("lam=", lam)
+for l in se1:
+    print()
+    print("="*80)
+    print("="*80)
+    print(l)
+    debug = 1
+    clearDict()
+    CEKCheck(l[0], l[1])
