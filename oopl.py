@@ -492,7 +492,7 @@ se1.append([["let", ["last", 5], "in", [["lambda", "Repeat", ["i", "sum"], ["if"
 
 print()
 print("="*80)
-print(">"*8, "task 38: Write a dozen test J3 programs, including extensions to your standard library")
+print(">"*8, "task 39: Extend the CEK1 machine to CEK2 to evaluate J4")
 print("="*80)
 
 
@@ -500,6 +500,7 @@ for l in se1:
     print()
     print("="*80)
     print("="*80)
-    ans = l.pop()
+    print(l)
     debug = 1
-    print(l, ">>>", ans, "?????")
+    clearDict()
+    CEKCheck(l[0], l[1])
