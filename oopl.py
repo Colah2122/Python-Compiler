@@ -615,6 +615,7 @@ se1.append([["let", ["p1", ["pair", 7, 8]],
 se1.append([["let", ["p", ["pair", 3, ["pair", 5, ["pair", 6, ["pair", 8, ["pair", 10, 12]]]]]],
              "in", ["snd", ["snd", ["snd", ["snd", "p"]]]]], "pair(10,12)"])
 se1.clear()
+se1.append([["cons", 2, "empty"], "inr.pair(2,inl.unit)"])
 se1.append([["cons", 1, ["cons", 2, "empty"]], "inr.pair(1,inr.pair(2,inl.unit))"])
 se1.append([["cons", ["cons", ["cons", ["cons", 1, 2], 3], 4], 5], "inr.pair(inr.pair(inr.pair(inr.pair(1,2),3),4),5)"])
 se1.append([["let", ["list", ["cons", 6, ["cons", 7, ["cons", 8, ["cons", 9, "empty"]]]]],
@@ -644,10 +645,21 @@ se1.append([["let", ["list", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
                     ["add2", ["lambda", "rec1", ["x"], ["+", "x", 2]]],
                     ["map", ["lambda", "rec3", ["F", "l"], ["case", "l", ["_", "l"], ["p", ["cons", ["F", ["fst", "p"]], ["rec3", "F", ["snd", "p"]]]]]]],
              "in", ["map", "add2", ["map", "add2", "list"]]], "inr.pair(5,inr.pair(6,inr.pair(7,inl.unit)))"])
+se1.append([["let", ["a", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["b", ["cons", 4, ["cons", 5, ["cons", 6, "empty"]]]],
+                    ["append", ["lambda", "rec3", ["x", "y"], ["case", "x", ["_", "y"], ["p", ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]]]]],
+                    ["length", ["lambda", "rec2", ["l"], ["case", "l", ["_", 0], ["p", ["+", 1, ["rec2", ["snd", "p"]]]]]]],
+             "in", ["length", ["append", "a", "b"]]], 6])
+se1.append([["let", ["a", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["b", ["cons", 4, ["cons", 5, ["cons", 6, "empty"]]]],
+                    ["append", ["lambda", "rec3", ["x", "y"], ["case", "x", ["_", "y"], ["p", ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]]]]],
+                    ["add2", ["lambda", "rec1", ["x"], ["+", "x", 2]]],
+                    ["map", ["lambda", "rec3", ["F", "l"], ["case", "l", ["_", "l"], ["p", ["cons", ["F", ["fst", "p"]], ["rec3", "F", ["snd", "p"]]]]]]],
+             "in", ["map", "add2", ["append", "a", "b"]]], "inr.pair(3,inr.pair(4,inr.pair(5,inr.pair(6,inr.pair(7,inr.pair(8,inl.unit))))))"])
 
 print()
 print("="*80)
-print(">"*8, "task 42: Extend your standard library to include options and basic list functions, like map, filter, and fold.")
+print(">"*8, "task 43: Write a dozen test J5 programs that use the standard library")
 print("="*80)
 
 for l in se1:
