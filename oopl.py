@@ -112,6 +112,7 @@ def isJValue(expr):
     if isinstance(expr, int): return True
     if isinstance(expr, JVariant): return True
     if isinstance(expr, JPair): return True
+    if isinstance(expr, str) and expr == "unit": return True
     return False
 
 def isCEKValue(expr):
@@ -589,21 +590,37 @@ se1.append([["let", ["FibN", ["lambda", ["n"], ["if", ["=", "n", 0], 0, ["if", [
 se1.append([["let", ["last", 5],
              "in", ["let", ["DoTimes", ["lambda", "iRep", ["i", "sum"], ["if", ["<", "i", "last"], ["iRep", ["+", "i", 1], ["+", "i", "sum"]], "sum"]]],
                     "in", ["DoTimes", 0, 0]]], 10])
+se1.clear()
+se1.append(["unit", "unit"])
+se1.append([["pair", 5, 6], "pair(5,6)"])
+se1.append([["pair", 5, ["pair", 6, 7]], "pair(5,pair(6,7))"])
+se1.append([["pair", ["pair", 2, 3], ["pair", 6, 7]], "pair(pair(2,3),pair(6,7))"])
+se1.append([["let", ["p", ["pair", 5, 6]], "in", ["fst", "p"]], 5])
+se1.append([["let", ["p", ["pair", 3, ["pair", 5, 6]]], "in", ["snd", ["snd", "p"]]], 6])
+se1.append([["let", ["p", ["pair", ["pair", ["pair", 1, 2], ["pair", 3, 4]], ["pair", ["pair", 5, 6], ["pair", 7, 8]]]],
+             "in", ["snd", ["snd", "p"]]], "pair(7,8)"])
+se1.append([["let", ["p", ["pair", ["pair", ["pair", 1, 2], ["pair", 3, 4]], ["pair", ["pair", 5, 6], ["pair", 7, 8]]]],
+             "in", ["fst", ["fst", "p"]]], "pair(1,2)"])
+se1.append([["let", ["p", ["pair", ["pair", ["pair", 1, 2], ["pair", 3, 4]], ["pair", ["pair", 5, 6], ["pair", 7, 8]]]],
+             "in", ["fst", "p"]], "pair(pair(1,2),pair(3,4))"])
+se1.append([["let", ["p1", ["pair", 7, 8]],
+             "in", ["let", ["p2", ["pair", 9, "p1"]],
+                    "in", ["snd", "p2"]]], "pair(7,8)"])
+se1.append([["let", ["p1", ["pair", 7, 8]],
+             "in", ["let", ["p2", ["pair", 9, "p1"]],
+                    "in", ["fst", "p2"]]], 9])
+se1.append([["let", ["p", ["pair", 3, ["pair", 5, ["pair", 6, ["pair", 8, ["pair", 10, 12]]]]]],
+             "in", ["snd", ["snd", ["snd", ["snd", "p"]]]]], "pair(10,12)"])
 
 print()
 print("="*80)
-print(">"*8, "task 40: Extend your J4 data structures to J5")
+print(">"*8, "task 41: Write a dozen test programs in J5 using the raw extensions.")
 print("="*80)
 
-p = desugar(["pair", 1, 2])
-print("p=", p)
-
-v1 = desugar(["inr", ["pair", 1, 2]])
-print("v1=", v1)
-
-v2 = desugar(["inl", ["pair", 3, 4]])
-print("v2=", v2)
-
-se = ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]
-c = JCase("x", "_", "y", "p", se)
-print("c=", c)
+for l in se1:
+    print()
+    print("="*80)
+    print("="*80)
+    print(l)
+    debug = 1
+    CEKCheck(l[0], l[1])
