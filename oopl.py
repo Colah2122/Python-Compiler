@@ -4,7 +4,7 @@ import copy
 
 debug = 1
 primJApp = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
-primAll = primJApp
+primAll = primJApp + ("pair", "inl", "inr", "fst", "snd")
 num = 0
 
 class JExpr(ABC):
@@ -69,11 +69,54 @@ class JLambda(JExpr):
     def interp(self):
         sys.exit("never8")
 
+class JPair(JExpr):
+    def __init__(self, lVar, rVar):
+        self.lVar = lVar
+        self.rVar = rVar
+        if not isinstance(lVar, JExpr): sys.exit("lVar must be a JExpr?")
+        if not isinstance(rVar, JExpr): sys.exit("rVar must be a JExpr?")
+    def __str__(self):
+        return "pair(" + str(self.lVar) + "," + str(self.rVar) + ")"
+    def interp(self):
+        return copy.deepcopy(self)
+
+class JVariant(JExpr):
+    def __init__(self, name, pair):
+        self.name = name
+        self.pair = pair
+        if not isinstance(name, str): sys.exit("name must be a string?")
+        if not isinstance(pair, JPair) and pair != "unit": sys.exit("pair must be a JPair?")
+    def __str__(self):
+        return self.name + "." + str(self.pair)
+    def interp(self):
+        return copy.deepcopy(self)
+
+class JCase(JExpr):
+    def __init__(self, name, xl, el, xr, er):
+        if not isinstance(name, str): sys.exit("variant must be a string?")
+        if not isinstance(xl, str): sys.exit("xl must be a string?")
+        if not isinstance(el, list) and not isinstance(el, str) and not isinstance(el, int): sys.exit("el must be a list, string or int?")
+        if not isinstance(xr, str): sys.exit("xr must be a string?")
+        if not isinstance(er, list) and not isinstance(er, str) and not isinstance(er, int): sys.exit("er must be a list, string or int?")
+        self.name = name
+        self.xl = xl
+        self.el = copy.deepcopy(el)
+        self.xr = xr
+        self.er = copy.deepcopy(er)
+    def __str__(self):
+        return "case " + self.name + " [" + self.xl + "=>" + myStr(self.el) + "] [" + self.xr + "=>" + myStr(self.er) + "]"
+    def interp(self):
+        sys.exit("never9")
+
 def isJValue(expr):
     if isinstance(expr, int): return True
+    if isinstance(expr, JVariant): return True
+    if isinstance(expr, JPair): return True
     return False
 
 def isCEKValue(expr):
+    if isinstance(expr, JPair): return True
+    if isinstance(expr, JVariant): return True
     if isinstance(expr, JLambda): return True
     if isinstance(expr, closure): return True
     return False
@@ -125,6 +168,14 @@ def desugar(se):
                 var.pop(0)
                 var.pop()
             return JLambda(name, var, se)
+        elif myLen == 3 and mySym in "pair":
+            return JPair(desugar(se[1]), desugar(se[2]))
+        elif myLen == 2 and mySym[0:2] in "in":
+            return JVariant(mySym, desugar(se[1]))
+        elif myLen == 2 and mySym in "fst":
+            return se[1].lVar
+        elif myLen == 2 and mySym in "snd":
+            return se[1].rVar
         elif myLen == 3 and mySym in primJApp:
             return JApp(mySym, desugar(se[1]), desugar(se[2]))
         elif myLen == 3 and mySym == "-":
@@ -308,6 +359,25 @@ class cek0:
             lam = JLambda(name, var, self.c)
             self.c = lam
             if debug: print("self.c=", self.c)
+        elif isinstance(self.c, list) and self.c[0] == "[" and self.c[1] == "case":
+            if debug: print(">>>> DESUGAR CASE >>>>")
+            eatBracket(self.c)    # remove case
+            var = self.c.pop(0)
+            print("var=",var)
+            inl = eatExpression(self.c)
+            xl = eatBracket(inl)
+            print("xl=",xl)
+            el = eatExpression(inl)
+            print("el=",el)
+            inr = eatExpression(self.c)
+            xr = eatBracket(inr)
+            print("xr=",xr)
+            er = eatExpression(inr)
+            print("er=",er)
+            case = JCase(var, xl, el, xr, er)
+            self.c = case
+            if debug: print("self.c=", self.c)
+            print("type(self.c)=", type(self.c))
     def step(self, cnt):
         if isinstance(self.c, list) and self.c[0] == "[" and self.c[1] == "if":
             if debug: print(">>>> RULE 1 >>>>")
@@ -325,6 +395,22 @@ class cek0:
             print("clo.env=",clo.env)
             self.c = clo
             self.env = dict()
+        elif isinstance(self.c, JCase):
+            if debug: print(">>>> RULE CASE >>>>")
+            var = self.env[self.c.name]
+            print("var=",var)
+            inlr = var.name
+            print("inlr=",inlr)
+            eb = self.c.er if inlr == "inr" else self.c.el
+            print("eb=",eb)
+            x = self.c.xr if inlr == "inr" else self.c.xl
+            print("x=",x)
+            env = {}
+            env[x] = var.pair
+            print("env=",env)
+            num = substituteList(env, eb)
+            print("eb=",eb)
+            self.c = eb
         elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isCEKValue(self.c) or isinstance(self.c, int)):
             if debug: print(">>>> RULE CLOSURE >>>>")
             clo = self.k.lVal[-1]
@@ -506,13 +592,18 @@ se1.append([["let", ["last", 5],
 
 print()
 print("="*80)
-print(">"*8, "task 39: Extend the CEK1 machine to CEK2 to evaluate J4")
+print(">"*8, "task 40: Extend your J4 data structures to J5")
 print("="*80)
 
-for l in se1:
-    print()
-    print("="*80)
-    print("="*80)
-    print(l)
-    debug = 1
-    CEKCheck(l[0], l[1])
+p = desugar(["pair", 1, 2])
+print("p=", p)
+
+v1 = desugar(["inr", ["pair", 1, 2]])
+print("v1=", v1)
+
+v2 = desugar(["inl", ["pair", 3, 4]])
+print("v2=", v2)
+
+se = ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]
+c = JCase("x", "_", "y", "p", se)
+print("c=", c)
