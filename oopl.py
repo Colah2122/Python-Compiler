@@ -1,37 +1,11 @@
-
 from abc import ABC, abstractmethod
 import sys
 import copy
 
 debug = 1
-primAll = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
-
-myFunc = {}
-myVar = {}
+primJApp = ("+", "*", "/", "-", "<=", "<", "=", ">", ">=")
+primAll = primJApp
 num = 0
-
-def clearDict():
-    global num
-    num = 0
-    myFunc.clear()
-    myVar.clear()
-
-def updateDict(name, varList, func):
-    if not "".join(varList).islower(): sys.exit("func " + name + " MUST only have lower case variables!")
-    if not name[0].isupper(): sys.exit("func " + name + " MUST start with a upper case letter!")
-    if name in myFunc: sys.exit("func " + name + " already defined??")
-    myFunc[name] = func
-    myVar[name] = varList
-
-def getFunction(name):
-    if name not in myFunc: sys.exit("func " + name + " not found")
-    expr = copy.deepcopy(myFunc[name])
-    varList = copy.copy(myVar[name])
-    if debug: print("FUNCTION", name + "(" + str(len(varList)) + "args)", ">>>>", expr)
-    return varList, expr
-
-def isFunction(name):
-    return True if name in myFunc else False
 
 class JExpr(ABC):
     def ppt(self):
@@ -58,7 +32,7 @@ class JApp(JExpr):
         self.prim = prim
         self.eLeft = eLeft
         self.eRight = eRight
-        if self.prim not in primAll: sys.exit(self.prim + " not supported?")
+        if self.prim not in primJApp: sys.exit(self.prim + " not supported?")
     def __str__(self):
         return "(" + str(self.prim) + " " + str(self.eLeft) + " " + str(self.eRight) + ")"
     def interp(self):
@@ -95,6 +69,15 @@ class JLambda(JExpr):
     def interp(self):
         sys.exit("never8")
 
+def isJValue(expr):
+    if isinstance(expr, int): return True
+    return False
+
+def isCEKValue(expr):
+    if isinstance(expr, JLambda): return True
+    if isinstance(expr, closure): return True
+    return False
+
 def substitute1(num, var, expr):
     cnt = 0
     if not isinstance(expr, list): return cnt
@@ -110,11 +93,7 @@ def substituteList(envDict, expr):
     cnt = 0
     orig = copy.deepcopy(expr)
     for var, arg in envDict.items():
-#        j2 = desugar(arg)
-#        print("j2=",j2)
-#        num = j2.interp()
         num = arg
-#        if not isinstance(j2, JNum) and debug: print("****", "SIMPLIFY VARS", arg, "-->", num, "****")
         cnt2 = substitute1(num, var, expr)
         if debug and cnt2 > 0: print("PUT", num, "-->", var, "INTO", orig)
         cnt += cnt2
@@ -122,33 +101,19 @@ def substituteList(envDict, expr):
 
 def CEKCheck(e, expAns):
     actAns = interpCEK(e)
-    isCorrect = actAns == expAns
+    isCorrect = str(actAns) == str(expAns)
     result = "CORRECT!!" if isCorrect else "FAILURE!!"
     print(actAns, " = ", expAns, " >>> ", result)
     return isCorrect
 
-def eatDefinitions(se):
-    if not isinstance(se, list): return se
-    cnt = 0
-    for item in se:
-        if isinstance(item, list) and item[0] == "define":
-            cnt += 1
-            if debug: print("func=",item)
-            name = item[1].pop(0)
-            updateDict(name, item[1], item[2])
-        else:
-            break
-    if cnt > 0: se = se[cnt]
-    if debug:
-        if debug: print("-"*50)
-        if debug: print("desugar=", se)
-    return se
-
 def desugar(se):
     if isinstance(se, int):
         return JNum(se)
+    if isinstance(se, JExpr):
+        return se
+    if isinstance(se, str) and se == "unit":
+        return se
     if isinstance(se, list):
-        se = eatDefinitions(se)
         myLen = len(se)
         mySym = str(se[0])
         if isinstance(se[0], int):
@@ -160,7 +125,7 @@ def desugar(se):
                 var.pop(0)
                 var.pop()
             return JLambda(name, var, se)
-        elif myLen == 3 and mySym in primAll:
+        elif myLen == 3 and mySym in primJApp:
             return JApp(mySym, desugar(se[1]), desugar(se[2]))
         elif myLen == 3 and mySym == "-":
             return desugar(["+", se[1], ["*", -1, se[2]]])
@@ -183,31 +148,6 @@ def flatten(aList):
         else:
             result.append(element)
     return ["["] + result + ["]"]
-
-def plugHole(ans, context):
-    if debug: print("context=",context)
-    i = context.index("Hole")
-    context[i] = ans
-    return ans if i == 0 else context
-
-def last(aList, item):
-    return len(aList) - list(reversed(aList)).index(item) -  1 if item in aList else -1
-
-def findRedex(term):
-    if debug: print("input=", term)
-    if isinstance(term, int):
-        return term, []
-    if isinstance(term, list):
-        start = last(term,"[") + 1
-        if start == 0:
-            return ["Hole"], term
-        stop = term.index("]",start)
-        redex = term[start:stop]
-        term[start-1] = "Hole"
-        del term[start:stop+1]
-        return term, redex
-    else:
-        sys.exit("can't findRedex?")
 
 def myStr(l):
     if isinstance(l, list):
@@ -266,7 +206,8 @@ def findOppositeBracket(l):
     return None
 
 def eatLambda(l):
-    eatBracket(l)    # remove lambda
+    lam = eatBracket(l)    # remove lambda
+    if lam != "lambda": sys.exit("lambda is missing??")
     name = "rec"
     if l[0] != "[":
         name = l.pop(0)
@@ -320,21 +261,43 @@ class cek0:
         print("self.env=", self.env)
         print("self.k=", self.k)
     def desugar(self):
-        if isinstance(self.c, list) and (self.c[1] == "let" or self.c[0] == "let"):
+        if isinstance(self.c, list) and self.c[0] == "[" and self.c[1] == "let":
             if debug: print(">>>> DESUGAR LET >>>>")
-            eatBracket(self.c)    # remove let
-            ec = eatExpression(self.c)
-            var = eatBracket(ec)
+            let = eatBracket(self.c)    # remove let
+            if let != "let": sys.exit("let is missing??")
+            var1 = []
+            ec = []
+            while True:
+                if self.c[0] == "in": break
+                se = eatExpression(self.c)
+                print("se=",se)
+                v = eatBracket(se)
+                var1.append(v)
+                if se[0] != "[":
+                    ec.append(se[0])
+                elif se[1] == "lambda":
+                    name2 = eatLambda(se)
+                    var2 = eatExpression(se)
+                    var2.pop(0)
+                    var2.pop()
+                    lam2 = JLambda(name2, var2, se)
+                    ec.append(lam2)
+                else:
+                    ec.append(se)
+            print("var1=",var1)
+            print("ec=",ec)
             i = self.c.pop(0)    # remove in
             if i != "in": sys.exit("cant find let in??")
-            eb = self.c
-            lam = JLambda("rec", [var], eb)
-            ec.insert(0,lam)
-            ec.insert(0,"[")
+            print("eb=",self.c)
+            print("self.env=",self.env)
+            print("myself.c=",self.c)
+            lam = JLambda("rec", var1, self.c)
+            ec.insert(0, lam)
+            ec.insert(0, "[")
             ec.append("]")
             self.c = ec
             if debug: print("self.c=", self.c)
-        elif isinstance(self.c, list) and self.c[1] == "lambda":
+        elif isinstance(self.c, list) and self.c[0] == "[" and self.c[1] == "lambda":
             if debug: print(">>>> DESUGAR LAMBDA >>>>")
             name = eatLambda(self.c)
             var = eatExpression(self.c)
@@ -346,7 +309,7 @@ class cek0:
             self.c = lam
             if debug: print("self.c=", self.c)
     def step(self, cnt):
-        if isinstance(self.c, list) and self.c[1] == "if":
+        if isinstance(self.c, list) and self.c[0] == "[" and self.c[1] == "if":
             if debug: print(">>>> RULE 1 >>>>")
             eatBracket(self.c)    # remove if
             ec = eatExpression(self.c)
@@ -356,21 +319,41 @@ class cek0:
             self.c = ec
         elif isinstance(self.k, kapp) and isinstance(self.c, JLambda):
             if debug: print(">>>> RULE LAMBDA >>>>")
+            print("self.env=",self.env)
             clo = closure(self.c, self.env)
             clo.env[self.c.name] = copy.deepcopy(clo)
+            print("clo.env=",clo.env)
             self.c = clo
             self.env = dict()
-        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isinstance(self.c, int) or isinstance(self.c, JLambda) or isinstance(self.c, closure)):
+        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal and isinstance(self.k.lVal[-1], closure) and (isCEKValue(self.c) or isinstance(self.c, int)):
             if debug: print(">>>> RULE CLOSURE >>>>")
             clo = self.k.lVal[-1]
+            print("clo=",clo)
             num = substituteList(clo.env, self.c)
+            print("num=",num)
+            print("self.c=",self.c)
+            print("self.env=",self.env)
             self.env = clo.env
-            self.k.lVal.insert(0, self.c)
+            print("clo.env=",clo.env)
+            print("self.k.lVal=",self.k.lVal)
+            if num > 0 and isinstance(self.c, list):
+                eatBracket(self.c)    # remove function
+                while True:
+                    e = eatExpression(self.c)
+                    if isinstance(e, list) and len(e) == 0: break
+                    print("e=",e)
+                    self.k.lVal.insert(0, e)
+            else:
+                self.k.lVal.insert(0, self.c)
             name = clo.lam.name
+            print("clo.lam.lVar=",clo.lam.lVar)
+            print("self.k.lVal=",self.k.lVal)
+            if len(clo.lam.lVar) != len(self.k.lVal)-1: sys.exit("num vars != vals??")
             for var in reversed(clo.lam.lVar):
                 self.env[var] = self.k.lVal.pop(0)
+                print(var,"<<<<<<<",self.env[var])
             self.env[name] = copy.deepcopy(clo)
-            eb = clo.lam.eBody
+            eb = copy.deepcopy(clo.lam.eBody)
             if isinstance(eb, list) and len(eb) > 1:
                 if eb[1] == "lambda":
                     eb.pop(0)
@@ -381,8 +364,10 @@ class cek0:
                     eb.append("]")
             self.c = eb
             self.k = self.k.frame
-            self.k.env = dict()
-        elif isinstance(self.c, list) and (self.c[1] in primAll or isFunction(self.c[1]) or isinstance(self.c[1], JLambda) or isinstance(self.c[1], closure) or self.c[1] == "["):
+            print("self.c=",self.c)
+            print("self.k=",self.k)
+            print("self.env=",self.env)
+        elif isinstance(self.c, list) and self.c[0] == "[" and (self.c[1] in primAll or isCEKValue(self.c[1]) or self.c[1] == "["):
             if debug: print(">>>> RULE 4 >>>>")
             if self.c[1] == "[":
                 self.c.pop(0)
@@ -402,8 +387,7 @@ class cek0:
             self.c = self.k.eTrue
             self.env = self.k.env
             self.k = self.k.frame
-#        elif (isinstance(self.c, str) and self.c.islower()) or (isinstance(self.c, list) and self.c[1] in self.env and self.c[1].isupper()):
-        elif (isinstance(self.c, str) and self.c.islower()) or (isinstance(self.c, list) and self.c[1] in self.env):
+        elif (isinstance(self.c, str) and self.c in self.env) or (isinstance(self.c, list) and self.c[0] == "[" and self.c[1] in self.env) or (isinstance(self.c,list) and self.c[0] in self.env):
             if debug: print(">>>> RULE 8 >>>>")
             expr = self.c if isinstance(self.c, list) else [self.c]
             cnt = substituteList(self.env, expr)
@@ -418,41 +402,26 @@ class cek0:
             var = eatExpression(self.k.lExpr)
             if isinstance(var, list) and len(var) == 3: var = var[1]
             self.c = var
-        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal[-1] in primAll:
+        elif isinstance(self.k, kapp) and not self.k.lExpr and self.k.lVal and self.k.lVal[-1] in primAll:
             if debug: print(">>>> RULE 6 >>>>")
             self.k.lVal.insert(0, self.c)
             n = list(reversed(self.k.lVal))
             j1 = desugar(n)
+            print("j1=",j1)
             self.c = j1.interp()
             self.env = dict()
-            self.k = self.k.frame
-        elif isinstance(self.k, kapp) and not self.k.lExpr and isFunction(self.k.lVal[-1]):
-            if debug: print(">>>> RULE 7 >>>>")
-            varList, expr = getFunction(self.k.lVal[-1])
-            self.k.lVal.insert(0, self.c)
-            n = list(reversed(self.k.lVal))
-            n.pop(0)    # remove func name
-            if len(n) != len(varList): sys.exit("incorrect number of args passed to function?")
-            envDict = dict(zip(varList, n))
-#            substituteList(envDict, expr)
-#            if debug: print(">>>>", "AFTER", expr)
-            self.c = flatten(expr)
-            self.env = envDict
             self.k = self.k.frame
         else:
             sys.exit("can't step no more??")
 
 def interpCEK(se):
-    se = eatDefinitions(se)
     st = cek0(se)
     cnt = 0
     print("inject")
     print("    ", st, "<<<<", "st" + str(cnt))
-    while(True):
-#        if cnt > 11: sys.exit("too many!!!")
-        if isinstance(st.k, kret) and isinstance(st.c, int):
-            break
-        if isinstance(st.c, str) and st.c.islower() and not st.env:
+    while True:
+#        if cnt > 350: sys.exit("too many!!!")
+        if isinstance(st.k, kret) and isJValue(st.c):
             break
         cnt += 1
         if debug: st.dump()
@@ -479,22 +448,64 @@ se1.append([["/", 9, ["if", ["-", 2, -2], 3, 4]], 3])
 se1.append([["+", 1, ["*", 2, 10], -3, 5, ["if", ["=", 3, 3], 3, ["+", 4, 4]]], 26])
 se1.append([["if", ["<", 1, 3], ["-", 5, 4], 6], 1])
 se1.append([["if", ["<", 1, 3], 15, ["-", 5, ["+", 2, 2]]], 15])
-se1.append([[["lambda", "Simple", ["n"], ["+", ["*", "n", 3], 4]], 3], 13])
-se1.append([[["lambda", "Simple", ["a", "b", "c", "d", "e", "f", "g", "h"], ["+", "a", "b", "c", "d", "e", "f", "g", "h"]], 1, 2, 3, 4, 5, 6, 7, 8], 36])
 se1.append([["let", ["x", 8], "in", ["let", ["y", 7], "in", ["+", "x", "y"]]], 15])
+se1.append([["let", ["x", ["+", 1, 7]], "in", ["let", ["y", ["-", 9, 2]], "in", ["+", "x", "y"]]], 15])
 se1.append([["let", ["x", 8], "in", ["let", ["x", ["+", "x", 1]], "in", ["+", "x", "x"]]], 18])
 se1.append([[["lambda", "Repeat", ["i", "sum"], ["if", ["<", "i", 3], "i", "sum"]], 4, 6], 6])
 se1.append([["let", ["l", 5], "in", [["lambda", "R", ["i", "s"], ["if", ["<", "i", "l"], "i", "s"]], 4, 6]], 4])
 se1.append([[["lambda", "Fsum", ["n"], ["if", ["=", "n", 1], 1, ["+", "n", ["Fsum", ["-", "n", 1]]]]], 6], 21])
+
 se1.append([[["lambda", "R", ["i", "s"], ["if", ["<", "i", 5], ["R", ["+", "i", 1], ["+", "i", "s"]], "s"]], 0, 0], 10])
 se1.append([[["lambda", "Factorial", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["Factorial", ["-", "n", 1]]]]], 6], 720])
-se1.append([["let", ["last", 5], "in", [["lambda", "Repeat", ["i", "sum"], ["if", ["<", "i", "last"], ["Repeat", ["+", "i", 1], ["+", "i", "sum"]], "sum"]], 0, 0]], 10])
+se1.append([["let", ["F", ["lambda", ["x"], ["+", "x", 2]]],
+             "in", ["F", ["F", ["F", ["F", 3]]]]], 11])
+se1.append([[["lambda", "rec", ["x"], ["+", "x", 2]], 3], 5])
+se1.append([["let", ["F", ["lambda", "rec", ["x"], ["+", "x", 2]]],
+             "in", ["F", 3]], 5])
+se1.append([["let", ["F", ["lambda", ["n"], ["+", "n", 3]]],
+                    ["x", ["+", 4, 5]],
+                    ["y", 7],
+             "in", ["F", ["+", "x", "y"]]], 19])
+se1.append([["let", ["F", ["lambda", ["x"], ["+", "x", 2]]],
+             "in", ["let", ["G", ["lambda", ["x", "y"], ["+", ["F", "x"], ["F", "y"]]]],
+                    "in", ["G", ["+", 1, 2], 4]]], 11])
+se1.append([["let", ["F", ["lambda", ["x"], ["+", "x", 2]]],
+             "in", ["F", 3]], 5])
+se1.append([["let", ["Simple", ["lambda", ["n"], ["+", ["*", "n", 3], 4]]],
+             "in", ["Simple", 3]], 13])
+se1.append([["let", ["Simple", ["lambda", ["a", "b", "c", "d", "e", "f", "g", "h"], ["+", "a", "b", "c", "d", "e", "f", "g", "h"]]],
+             "in", ["Simple", 1, 2, 3, 4, 5, 6, 7, 8]], 36])
+se1.append([["let", ["Plus1", ["lambda", ["n"], ["+", "n", 1]]],
+                    ["Plus2", ["lambda", ["n"], ["+", "n", 2]]],
+                    ["Plus3", ["lambda", ["n"], ["+", "n", 3]]],
+                    ["Plus4", ["lambda", ["n"], ["+", "n", 4]]],
+                    ["Plus5", ["lambda", ["n"], ["+", "n", 5]]],
+             "in", ["+", ["Plus1", 5], ["Plus2", 4], ["Plus3", 3], ["Plus4", 2], ["Plus5", 1]]], 30])
+se1.append([["let", ["Plus1", ["lambda", ["n"], ["+", "n", 1]]],
+                    ["Plus2", ["lambda", ["n"], ["+", "n", 2]]],
+                    ["Plus3", ["lambda", ["n"], ["+", "n", 3]]],
+                    ["Plus4", ["lambda", ["n"], ["+", "n", 4]]],
+                    ["Plus5", ["lambda", ["n"], ["+", "n", 5]]],
+             "in", ["+", ["Plus1", ["Plus2", ["Plus3", ["Plus4", ["Plus5", 1]]]]], 12]], 28])
+se1.append([["let", ["Double", ["lambda", ["x"], ["+", "x", "x"]]],
+             "in", ["let", ["Quad", ["lambda", ["y"], ["Double", ["Double", "y"]]]],
+                    "in", ["Quad", ["+", 1, ["Double", 3]]]]], 28])
+se1.append([["let", ["Double", ["lambda", ["x"], ["+", "x", "x"]]],
+             "in", ["Double", ["Double", 1]]], 4])
+se1.append([["let", ["Factorial", ["lambda", "iFac", ["n"], ["if", ["=", "n", 1], 1, ["*", "n", ["iFac", ["-", "n", 1]]]]]],
+             "in", ["+", 1, ["Factorial", 6]]], 721])
+se1.append([["let", ["ImN", ["lambda", ["n"], ["+", "n", 0]]],
+             "in", ["+", ["ImN", 4], ["ImN", 3], ["ImN", -3], ["ImN", 6]]], 10])
+#se1.clear()
+se1.append([["let", ["Sum1toN", ["lambda", "iSum", ["n"], ["if", ["=", "n", 1], 1, ["+", "n", ["iSum", ["+", "n", -1]]]]]],
+             "in", ["+", 1, ["Sum1toN", 5]]], 16])
+se1.append([["let", ["FibN", ["lambda", ["n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n", 1], 1, ["+", ["rec", ["-", "n", 1]], ["rec", ["-", "n", 2]]]]]]],
+             "in", ["FibN", 5]], 5])
 
 print()
 print("="*80)
-print(">"*8, "task 39: Extend the CEK1 machine to CEK2 to evaluate J4")
+print(">"*8, "task 37: Extend desugar to allow not mentioning the recursive name, as well as provide a default")
 print("="*80)
-
 
 for l in se1:
     print()
@@ -502,5 +513,4 @@ for l in se1:
     print("="*80)
     print(l)
     debug = 1
-    clearDict()
     CEKCheck(l[0], l[1])
