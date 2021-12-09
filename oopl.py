@@ -302,6 +302,9 @@ class cek0:
         self.c = flatten(se)
         self.env = dict()
         self.k = kret()
+        self.stdlib = {}
+        self.stdlib["empty"] = flatten(["inl", "unit"])
+        self.stdlib["cons"] = closure(JLambda("cons", ["data", "rest"], flatten(["inr", ["pair", "data", "rest"]])), {})
     def __str__(self):
         aStr = " ".join(str(a) for a in self.c) if isinstance(self.c, list) else str(self.c)
         return "< " + aStr + ", " + myStr(self.env) + ", " + str(self.k) + " >"
@@ -474,9 +477,10 @@ class cek0:
             self.c = self.k.eTrue
             self.env = self.k.env
             self.k = self.k.frame
-        elif (isinstance(self.c, str) and self.c in self.env) or (isinstance(self.c, list) and self.c[0] == "[" and self.c[1] in self.env) or (isinstance(self.c,list) and self.c[0] in self.env):
+        elif (isinstance(self.c, str) and (self.c in self.env or self.c in self.stdlib)) or (isinstance(self.c, list) and self.c[0] == "[" and (self.c[1] in self.env or self.c[1] in self.stdlib)) or (isinstance(self.c,list) and (self.c[0] in self.env or self.c[0] in self.stdlib)):
             if debug: print(">>>> RULE 8 >>>>")
             expr = self.c if isinstance(self.c, list) else [self.c]
+            self.env.update(self.stdlib)
             cnt = substituteList(self.env, expr)
             if cnt == 0: print(">>>>>>>>>> ERROR no substitutions?? >>>>>>>>>>>>>>>>>>>>>>>>")
             se = expr if isinstance(self.c, list) else expr.pop()
@@ -590,7 +594,6 @@ se1.append([["let", ["FibN", ["lambda", ["n"], ["if", ["=", "n", 0], 0, ["if", [
 se1.append([["let", ["last", 5],
              "in", ["let", ["DoTimes", ["lambda", "iRep", ["i", "sum"], ["if", ["<", "i", "last"], ["iRep", ["+", "i", 1], ["+", "i", "sum"]], "sum"]]],
                     "in", ["DoTimes", 0, 0]]], 10])
-se1.clear()
 se1.append(["unit", "unit"])
 se1.append([["pair", 5, 6], "pair(5,6)"])
 se1.append([["pair", 5, ["pair", 6, 7]], "pair(5,pair(6,7))"])
@@ -611,10 +614,40 @@ se1.append([["let", ["p1", ["pair", 7, 8]],
                     "in", ["fst", "p2"]]], 9])
 se1.append([["let", ["p", ["pair", 3, ["pair", 5, ["pair", 6, ["pair", 8, ["pair", 10, 12]]]]]],
              "in", ["snd", ["snd", ["snd", ["snd", "p"]]]]], "pair(10,12)"])
+se1.clear()
+se1.append([["cons", 1, ["cons", 2, "empty"]], "inr.pair(1,inr.pair(2,inl.unit))"])
+se1.append([["cons", ["cons", ["cons", ["cons", 1, 2], 3], 4], 5], "inr.pair(inr.pair(inr.pair(inr.pair(1,2),3),4),5)"])
+se1.append([["let", ["list", ["cons", 6, ["cons", 7, ["cons", 8, ["cons", 9, "empty"]]]]],
+                    ["length", ["lambda", "rec2", ["l"], ["case", "l", ["_", 0], ["p", ["+", 1, ["rec2", ["snd", "p"]]]]]]],
+             "in", ["length", "empty"]], 0])
+se1.append([["let", ["list", ["cons", 6, ["cons", 7, ["cons", 8, ["cons", 9, "empty"]]]]],
+                    ["length", ["lambda", "rec2", ["l"], ["case", "l", ["_", 0], ["p", ["+", 1, ["rec2", ["snd", "p"]]]]]]],
+             "in", ["length", "list"]], 4])
+se1.append([["let", ["list", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["add2", ["lambda", "rec1", ["x"], ["+", "x", 2]]],
+                    ["map", ["lambda", "rec3", ["F", "l"], ["case", "l", ["_", "l"], ["p", ["cons", ["F", ["fst", "p"]], ["rec3", "F", ["snd", "p"]]]]]]],
+             "in", ["map", "add2", "list"]], "inr.pair(3,inr.pair(4,inr.pair(5,inl.unit)))"])
+se1.append([["let", ["list", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["add", ["lambda", "rec1", ["x", "y"], ["+", "x", "y"]]],
+                   ["reduce", ["lambda", "rec3", ["F", "z", "l"], ["case", "l", ["_", "z"], ["p", ["rec3", "F", ["F", "z", ["fst", "p"]], ["snd", "p"]]]]]],
+             "in", ["reduce", "add", 0, "list"]], 6])
+se1.append([["let", ["a", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["b", ["cons", 4, ["cons", 5, ["cons", 6, "empty"]]]],
+                    ["append", ["lambda", "rec3", ["x", "y"], ["case", "x", ["_", "y"], ["p", ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]]]]],
+             "in", ["append", "a", "b"]], "inr.pair(1,inr.pair(2,inr.pair(3,inr.pair(4,inr.pair(5,inr.pair(6,inl.unit))))))"])
+se1.append([["let", ["a", ["cons", 1, ["cons", 2, "empty"]]],
+                    ["b", ["cons", 4, "empty"]],
+                    ["c", ["cons", 6, "empty"]],
+                    ["append", ["lambda", "rec3", ["x", "y"], ["case", "x", ["_", "y"], ["p", ["cons", ["fst", "p"], ["rec3", ["snd", "p"], "y"]]]]]],
+             "in", ["append", "c", ["append", "a", "b"]]], "inr.pair(6,inr.pair(1,inr.pair(2,inr.pair(4,inl.unit))))"])
+se1.append([["let", ["list", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
+                    ["add2", ["lambda", "rec1", ["x"], ["+", "x", 2]]],
+                    ["map", ["lambda", "rec3", ["F", "l"], ["case", "l", ["_", "l"], ["p", ["cons", ["F", ["fst", "p"]], ["rec3", "F", ["snd", "p"]]]]]]],
+             "in", ["map", "add2", ["map", "add2", "list"]]], "inr.pair(5,inr.pair(6,inr.pair(7,inl.unit)))"])
 
 print()
 print("="*80)
-print(">"*8, "task 41: Write a dozen test programs in J5 using the raw extensions.")
+print(">"*8, "task 42: Extend your standard library to include options and basic list functions, like map, filter, and fold.")
 print("="*80)
 
 for l in se1:
