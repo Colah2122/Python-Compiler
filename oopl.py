@@ -614,7 +614,6 @@ se1.append([["let", ["p1", ["pair", 7, 8]],
                     "in", ["fst", "p2"]]], 9])
 se1.append([["let", ["p", ["pair", 3, ["pair", 5, ["pair", 6, ["pair", 8, ["pair", 10, 12]]]]]],
              "in", ["snd", ["snd", ["snd", ["snd", "p"]]]]], "pair(10,12)"])
-se1.clear()
 se1.append([["cons", 2, "empty"], "inr.pair(2,inl.unit)"])
 se1.append([["cons", 1, ["cons", 2, "empty"]], "inr.pair(1,inr.pair(2,inl.unit))"])
 se1.append([["cons", ["cons", ["cons", ["cons", 1, 2], 3], 4], 5], "inr.pair(inr.pair(inr.pair(inr.pair(1,2),3),4),5)"])
@@ -659,7 +658,7 @@ se1.append([["let", ["a", ["cons", 1, ["cons", 2, ["cons", 3, "empty"]]]],
 
 print()
 print("="*80)
-print(">"*8, "task 43: Write a dozen test J5 programs that use the standard library")
+print(">"*8, "task 44: Extend your J4 data structures to J5 and extend the CEK2 machine to CEK3 to evaluate J5.")
 print("="*80)
 
 for l in se1:
