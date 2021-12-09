@@ -500,14 +500,13 @@ se1.append([["let", ["Sum1toN", ["lambda", "iSum", ["n"], ["if", ["=", "n", 1], 
              "in", ["+", 1, ["Sum1toN", 5]]], 16])
 se1.append([["let", ["FibN", ["lambda", ["n"], ["if", ["=", "n", 0], 0, ["if", ["=", "n", 1], 1, ["+", ["rec", ["-", "n", 1]], ["rec", ["-", "n", 2]]]]]]],
              "in", ["FibN", 5]], 5])
-#se1.clear()
 se1.append([["let", ["last", 5],
              "in", ["let", ["DoTimes", ["lambda", "iRep", ["i", "sum"], ["if", ["<", "i", "last"], ["iRep", ["+", "i", 1], ["+", "i", "sum"]], "sum"]]],
                     "in", ["DoTimes", 0, 0]]], 10])
 
 print()
 print("="*80)
-print(">"*8, "task 38: Write a dozen test J3 programs, including extensions to your standard library")
+print(">"*8, "task 39: Extend the CEK1 machine to CEK2 to evaluate J4")
 print("="*80)
 
 for l in se1:
